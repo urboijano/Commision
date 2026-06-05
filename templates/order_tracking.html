@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% block title %}Track Order - Food Ordering{% endblock %}
+{% block content %}
+<div id="trackingContent">
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2">Loading order status...</p>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1060;">
+    <div id="statusToast" class="toast" role="alert">
+        <div class="toast-body d-flex align-items-center">
+            <i class="bi bi-bell-fill text-warning me-2"></i>
+            <span id="statusToastMsg">Status updated!</span>
+            <button type="button" class="btn-close ms-2" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const orderId = '{{ order_id }}';
+let ws = null;
+let statusCheckInterval = null;
+
+const STATUS_ORDER = ['received', 'preparing', 'ready_for_pickup', 'completed'];
+const STATUS_LABELS = {
+    received: 'Order Received',
+    preparing: 'Preparing',
+    ready_for_pickup: 'Ready for Pick-Up',
+    completed: 'Completed',
+    cancelled: 'Cancelled'
+};
+const STATUS_ICONS = {
+    received: 'bi-check-circle',
+    preparing: 'bi-gear',
+    ready_for_pickup: 'bi-bell',
+    completed: 'bi-check-all'
+};
+
+async function loadTracking() {
+    const data = await apiGet(`/api/orders/${orderId}/track/`);
+    const container = document.getElementById('trackingContent');
+
+    if (!data) {
+        container.innerHTML = '<div class="alert alert-danger">Failed to load tracking info.</div>';
+        return;
+    }
+
+    const currentIdx = STATUS_ORDER.indexOf(data.current_status);
+    const stepsHtml = STATUS_ORDER.map((status, idx) => {
+        let stateClass = '';
+        if (idx < currentIdx || data.current_status === 'completed') stateClass = 'completed';
+        else if (idx === currentIdx) stateClass = 'active';
+        const icon = STATUS_ICONS[status] || 'bi-circle';
+        return `
+            <div class="col step ${stateClass}">
+                <div class="step-icon">
+                    <i class="bi ${icon}"></i>
+                </div>
+                <div class="step-label">${STATUS_LABELS[status]}</div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="text-center mb-4">
+            <h4><i class="bi bi-geo-alt"></i> Track Your Order</h4>
+            <div class="order-number-display mt-2">${data.order_number}</div>
+        </div>
+
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body">
+                <div class="status-stepper">
+                    <div class="row g-0">
+                        ${stepsHtml}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        ${data.current_status === 'ready_for_pickup' ? `
+            <div class="alert alert-success text-center fs-5">
+                <i class="bi bi-bell-fill"></i>
+                Your order is ready for pick-up! Please proceed to the pick-up area
+                and present your order number. Pay cash on pick-up.
+            </div>
+        ` : ''}
+
+        ${data.current_status === 'completed' ? `
+            <div class="alert alert-info text-center">
+                <i class="bi bi-check-all"></i> Order completed! Please leave a feedback.
+                <a href="/order/${orderId}/feedback/" class="btn btn-primary btn-sm ms-2">
+                    Rate Your Experience
+                </a>
+            </div>
+        ` : ''}
+
+        <div class="text-center mt-3">
+            <a href="/orders/" class="btn btn-outline-primary">
+                <i class="bi bi-list"></i> All Orders
+            </a>
+            ${data.current_status === 'completed' ? `
+                <a href="/order/${orderId}/feedback/" class="btn btn-primary">
+                    <i class="bi bi-star"></i> Rate Your Experience
+                </a>
+            ` : ''}
+        </div>
+
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-clock-history"></i> Status History</h6>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    ${data.status_history.length > 0 ? data.status_history.map(h => `
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><strong>${STATUS_LABELS[h.status] || h.status}</strong></span>
+                            <small class="text-muted">${new Date(h.changed_at).toLocaleString()}</small>
+                        </li>
+                    `).join('') : '<li class="list-group-item text-muted">No history</li>'}
+                </ul>
+            </div>
+        </div>
+    `;
+}
+
+function connectWebSocket() {
+    const token = getToken();
+    if (!token) return;
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/orders/`;
+
+    try {
+        ws = new WebSocket(wsUrl);
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.order_id === orderId || data.order_number) {
+                loadTracking();
+                showStatusToast(data.message || 'Order status updated!');
+            }
+        };
+
+        ws.onclose = function() {
+            setTimeout(connectWebSocket, 3000);
+        };
+    } catch (e) {
+        console.log('WebSocket not available, using polling');
+    }
+}
+
+function showStatusToast(msg) {
+    document.getElementById('statusToastMsg').textContent = msg;
+    const toast = new bootstrap.Toast(document.getElementById('statusToast'), { delay: 4000 });
+    toast.show();
+}
+
+loadTracking();
+
+if (isAuthenticated()) {
+    connectWebSocket();
+    statusCheckInterval = setInterval(loadTracking, 15000);
+}
+</script>
+{% endblock %}

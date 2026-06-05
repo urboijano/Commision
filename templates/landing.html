@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Welcome - Food Ordering{% endblock %}
+{% block content %}
+<div class="hero-section text-center mb-5">
+    <h1 class="display-4 fw-bold mb-3">
+        <i class="bi bi-shop"></i> Welcome to the Canteen
+    </h1>
+    <p class="lead mb-4">Order your favorite food online and pick up when ready!</p>
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+        {% if user.is_authenticated %}
+            <a href="/menu/" class="btn btn-light btn-lg px-5">
+                <i class="bi bi-menu-app"></i> Browse Menu
+            </a>
+            <a href="/orders/" class="btn btn-outline-light btn-lg px-5">
+                <i class="bi bi-box"></i> My Orders
+            </a>
+        {% else %}
+            <a href="/login/" class="btn btn-light btn-lg px-5">
+                <i class="bi bi-box-arrow-in-right"></i> Login
+            </a>
+            <a href="/register/" class="btn btn-outline-light btn-lg px-5">
+                <i class="bi bi-person-plus"></i> Create Account
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm text-center p-4">
+            <div class="card-body">
+                <i class="bi bi-phone fs-1 text-primary mb-3"></i>
+                <h5>1. Scan & Order</h5>
+                <p class="text-muted">Scan the QR code at the canteen to start ordering from your phone.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm text-center p-4">
+            <div class="card-body">
+                <i class="bi bi-bell fs-1 text-primary mb-3"></i>
+                <h5>2. Get Notified</h5>
+                <p class="text-muted">Receive real-time updates when your order is being prepared and ready.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm text-center p-4">
+            <div class="card-body">
+                <i class="bi bi-bag-check fs-1 text-primary mb-3"></i>
+                <h5>3. Pick Up & Pay</h5>
+                <p class="text-muted">Present your order number at the pick-up area and pay cash on pick-up.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="text-center mt-5 pt-4 border-top">
+    <p class="text-muted small">Scan the QR code at the canteen to get started, or create an account below.</p>
+    {% if not user.is_authenticated %}
+        <a href="/register/" class="btn btn-primary btn-lg">
+            <i class="bi bi-person-plus"></i> Create Your Account
+        </a>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% block title %}Review Cart - Food Ordering{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0"><i class="bi bi-cart-check"></i> Your Cart</h3>
+    <a href="/menu/" class="btn btn-outline-primary">
+        <i class="bi bi-plus-circle"></i> Add More Items
+    </a>
+</div>
+
+<div id="cartContent">
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+    </div>
+</div>
+
+<div id="cartBottom" class="d-none">
+    <div class="card shadow-sm border-0 mt-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Total:</h5>
+                <h4 class="mb-0 fw-bold text-success" id="cartTotal">₱0.00</h4>
+            </div>
+            <div class="d-grid gap-2">
+                <button class="btn btn-primary btn-lg" id="confirmOrderBtn">
+                    <i class="bi bi-check-circle"></i> Confirm Order
+                </button>
+                <button class="btn btn-outline-danger" id="clearCartBtn">
+                    <i class="bi bi-trash"></i> Clear Cart
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1060;">
+    <div id="orderToast" class="toast" role="alert">
+        <div class="toast-body d-flex align-items-center">
+            <i class="bi bi-check-circle-fill text-success me-2"></i>
+            <span id="orderToastMsg">Order placed!</span>
+            <button type="button" class="btn-close ms-2" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadCart() {
+    const container = document.getElementById('cartContent');
+    const bottom = document.getElementById('cartBottom');
+    const data = await apiGet('/api/cart/');
+
+    if (!data || !data.items || data.items.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-cart-x" style="font-size:4rem;color:#dee2e6;"></i>
+                <h5 class="mt-3 text-muted">Your cart is empty</h5>
+                <a href="/menu/" class="btn btn-primary mt-3">
+                    <i class="bi bi-menu-app"></i> Browse Menu
+                </a>
+            </div>
+        `;
+        bottom.classList.add('d-none');
+        return;
+    }
+
+    container.innerHTML = data.items.map(item => `
+        <div class="card shadow-sm border-0 mb-2">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">${item.item_name}</h6>
+                        <small class="text-muted">₱${parseFloat(item.item_price).toFixed(2)} each</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-outline-secondary btn-sm qty-minus" data-id="${item.cart_item_id}">-</button>
+                        <span class="fw-bold mx-1 qty-display" data-id="${item.cart_item_id}">${item.quantity}</span>
+                        <button class="btn btn-outline-secondary btn-sm qty-plus" data-id="${item.cart_item_id}">+</button>
+                        <span class="fw-bold text-success ms-2" style="min-width:70px;text-align:right;">
+                            ₱${parseFloat(item.subtotal).toFixed(2)}
+                        </span>
+                        <button class="btn btn-outline-danger btn-sm ms-2 remove-item" data-id="${item.cart_item_id}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    document.getElementById('cartTotal').textContent = `₱${parseFloat(data.total_price).toFixed(2)}`;
+    bottom.classList.remove('d-none');
+
+    document.querySelectorAll('.qty-plus').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = this.dataset.id;
+            const display = document.querySelector(`.qty-display[data-id="${id}"]`);
+            const newQty = parseInt(display.textContent) + 1;
+            await updateQuantity(id, newQty);
+        });
+    });
+
+    document.querySelectorAll('.qty-minus').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = this.dataset.id;
+            const display = document.querySelector(`.qty-display[data-id="${id}"]`);
+            const newQty = Math.max(0, parseInt(display.textContent) - 1);
+            await updateQuantity(id, newQty);
+        });
+    });
+
+    document.querySelectorAll('.remove-item').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            await updateQuantity(this.dataset.id, 0);
+        });
+    });
+}
+
+async function updateQuantity(cartItemId, quantity) {
+    const result = await apiPatch(`/api/cart/item/${cartItemId}/`, { quantity });
+    if (result) {
+        loadCart();
+        updateGlobalCart();
+    }
+}
+
+async function updateGlobalCart() {
+    const data = await apiGet('/api/cart/');
+    if (data) {
+        const badge = document.getElementById('cartCountBadge');
+        if (badge) {
+            badge.textContent = data.total_items || 0;
+            badge.style.display = (data.total_items || 0) > 0 ? '' : 'none';
+        }
+    }
+}
+
+document.getElementById('confirmOrderBtn')?.addEventListener('click', async function() {
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Placing order...';
+
+    const result = await apiPost('/api/orders/place/', {});
+
+    if (result && result.order_number) {
+        showAlert(`Order #${result.order_number} placed successfully!`, 'success');
+        setTimeout(() => {
+            window.location.href = `/order/${result.order_id}/`;
+        }, 1000);
+    } else {
+        this.disabled = false;
+        this.innerHTML = '<i class="bi bi-check-circle"></i> Confirm Order';
+    }
+});
+
+document.getElementById('clearCartBtn')?.addEventListener('click', async function() {
+    if (!confirm('Clear all items from your cart?')) return;
+    await apiDelete('/api/cart/clear/');
+    loadCart();
+    updateGlobalCart();
+});
+
+loadCart();
+</script>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Order Confirmed - Food Ordering{% endblock %}
+{% block content %}
+<div class="text-center py-4" id="orderContent">
+    <div class="spinner-border text-primary mb-4" role="status" style="width:3rem;height:3rem;"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const orderId = '{{ order_id }}';
+
+async function loadOrder() {
+    const data = await apiGet(`/api/orders/${orderId}/`);
+    const container = document.getElementById('orderContent');
+
+    if (!data) {
+        container.innerHTML = '<div class="alert alert-danger">Failed to load order.</div>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="mb-4">
+            <div class="display-1 text-success mb-3">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+            <h2 class="fw-bold">Order Confirmed!</h2>
+            <p class="text-muted">Your order has been placed successfully.</p>
+        </div>
+
+        <div class="mb-4">
+            <small class="text-muted">Your Order Number</small>
+            <div class="order-number-display">${data.order_number}</div>
+            <p class="text-muted mt-2">
+                <i class="bi bi-info-circle"></i> Please save this number for pick-up.
+            </p>
+        </div>
+
+        <div class="card shadow-sm border-0 mb-4 mx-auto" style="max-width:500px;">
+            <div class="card-header bg-white fw-bold">Order Summary</div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    ${data.items.map(item => `
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>${item.item_name} <small class="text-muted">x${item.quantity}</small></span>
+                            <span class="fw-bold">₱${parseFloat(item.subtotal).toFixed(2)}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+                <div class="card-footer bg-white d-flex justify-content-between fw-bold">
+                    <span>Total</span>
+                    <span class="text-success">₱${parseFloat(data.total_amount).toFixed(2)}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <span class="badge bg-primary fs-6 px-3 py-2">
+                <i class="bi bi-clock"></i> ${data.status_display || 'Order Received'}
+            </span>
+        </div>
+
+        <p class="text-muted small mb-3">
+            <i class="bi bi-cash"></i> Pay cash at the pick-up area when you collect your order.
+        </p>
+
+        <div class="d-flex justify-content-center gap-3">
+            <a href="/order/${orderId}/track/" class="btn btn-primary btn-lg">
+                <i class="bi bi-geo-alt"></i> Track Order
+            </a>
+            <a href="/menu/" class="btn btn-outline-primary btn-lg">
+                <i class="bi bi-plus-circle"></i> Order Again
+            </a>
+        </div>
+    `;
+}
+
+loadOrder();
+</script>
+{% endblock %}
