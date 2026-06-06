@@ -383,7 +383,12 @@ def force_order_status(request, order_id):
 
 @ensure_csrf_cookie
 def landing_page(request):
-    return render(request, 'landing.html')
+    menu_items = MenuItem.objects.filter(is_available=True)[:8]
+    categories = MenuItem.CATEGORY_CHOICES
+    return render(request, 'landing.html', {
+        'menu_items': menu_items,
+        'categories': categories,
+    })
 
 
 @ensure_csrf_cookie

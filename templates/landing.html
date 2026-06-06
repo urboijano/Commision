@@ -1,66 +1,199 @@
 {% extends 'base.html' %}
-{% block title %}Welcome - Food Ordering{% endblock %}
+{% block title %}Canteen – Fresh Food, Fast{% endblock %}
 {% block content %}
-<div class="hero-section text-center mb-5">
-    <h1 class="display-4 fw-bold mb-3">
-        <i class="bi bi-shop"></i> Welcome to the Canteen
-    </h1>
-    <p class="lead mb-4">Order your favorite food online and pick up when ready!</p>
-    <div class="d-flex justify-content-center gap-3 flex-wrap">
-        {% if user.is_authenticated %}
-            <a href="/menu/" class="btn btn-light btn-lg px-5">
-                <i class="bi bi-menu-app"></i> Browse Menu
-            </a>
-            <a href="/orders/" class="btn btn-outline-light btn-lg px-5">
-                <i class="bi bi-box"></i> My Orders
-            </a>
-        {% else %}
-            <a href="/login/" class="btn btn-light btn-lg px-5">
-                <i class="bi bi-box-arrow-in-right"></i> Login
-            </a>
-            <a href="/register/" class="btn btn-outline-light btn-lg px-5">
-                <i class="bi bi-person-plus"></i> Create Account
-            </a>
-        {% endif %}
-    </div>
-</div>
+<style>
+  .navbar { display: none !important; }
+  body > .container, body .py-4 { max-width: none; padding: 0 !important; }
+</style>
+<div class="landing-bg">
+  <div id="alertContainer"></div>
+  <div class="landing-grid">
+    <div class="landing-main">
+      <div class="main-container">
 
-<div class="row g-4">
-    <div class="col-md-4">
-        <div class="card h-100 border-0 shadow-sm text-center p-4">
-            <div class="card-body">
-                <i class="bi bi-phone fs-1 text-primary mb-3"></i>
-                <h5>1. Scan & Order</h5>
-                <p class="text-muted">Scan the QR code at the canteen to start ordering from your phone.</p>
+        <div class="main-header">
+          <div class="brand-mark">NagkaonKanaLab <i data-lucide="utensils-crossed" class="brand-icon"></i></div>
+          <div class="welcome-actions">
+            <div class="search-wrapper">
+              <i data-lucide="search" class="search-icon"></i>
+              <input type="text" class="search-input" placeholder="Search for meals...">
             </div>
+            <a href="{% if user.is_authenticated %}#{% else %}/login/{% endif %}" class="icon-btn">
+              <i data-lucide="circle-user"></i>
+            </a>
+            <a href="/cart/" class="cart-btn">
+              <i data-lucide="shopping-bag"></i>
+              <span class="cart-count-dot" id="navCartCount">0</span>
+            </a>
+          </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card h-100 border-0 shadow-sm text-center p-4">
-            <div class="card-body">
-                <i class="bi bi-bell fs-1 text-primary mb-3"></i>
-                <h5>2. Get Notified</h5>
-                <p class="text-muted">Receive real-time updates when your order is being prepared and ready.</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card h-100 border-0 shadow-sm text-center p-4">
-            <div class="card-body">
-                <i class="bi bi-bag-check fs-1 text-primary mb-3"></i>
-                <h5>3. Pick Up & Pay</h5>
-                <p class="text-muted">Present your order number at the pick-up area and pay cash on pick-up.</p>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="text-center mt-5 pt-4 border-top">
-    <p class="text-muted small">Scan the QR code at the canteen to get started, or create an account below.</p>
-    {% if not user.is_authenticated %}
-        <a href="/register/" class="btn btn-primary btn-lg">
-            <i class="bi bi-person-plus"></i> Create Your Account
-        </a>
-    {% endif %}
+        <div class="main-body">
+          <div class="quick-grid">
+            <div class="quick-grid-left">
+              <div class="quick-card repeat-card">
+                <div class="quick-card-icon">
+                  <i data-lucide="rotate-ccw"></i>
+                </div>
+                <div class="quick-card-body">
+                  <h5>Repeat Your Last Meal</h5>
+                  <p class="text-muted small">Quick reorder from your history</p>
+                </div>
+                <a href="/menu/" class="stretched-link"></a>
+              </div>
+              <div class="quick-card promo-card">
+                <div class="promo-content">
+                  <h5>Customize Your Meal Plan</h5>
+                  <p>Build a plan that fits your cravings</p>
+                  <span class="promo-cta">Explore now <i data-lucide="arrow-right"></i></span>
+                </div>
+                <a href="/menu/" class="stretched-link"></a>
+              </div>
+            </div>
+            <div class="quick-grid-right">
+              <div class="quick-food-img">
+                <i data-lucide="image"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-header">
+            <h5>Top Categories</h5>
+          </div>
+          <div class="categories-row">
+            {% for key, label in categories %}
+            <a href="/menu/?category={{ key }}" class="category-pill">
+              {% if key == 'rice' %}<i data-lucide="wheat" class="cat-icon"></i>{% elif key == 'noodles' %}<i data-lucide="utensils-crossed" class="cat-icon"></i>{% elif key == 'drinks' %}<i data-lucide="cup-soda" class="cat-icon"></i>{% elif key == 'snacks' %}<i data-lucide="popcorn" class="cat-icon"></i>{% elif key == 'desserts' %}<i data-lucide="cake-slice" class="cat-icon"></i>{% endif %}
+              {{ label }}
+            </a>
+            {% endfor %}
+          </div>
+
+          <div class="section-header">
+            <h5>Recommended for You</h5>
+            <a href="/menu/" class="section-link">View all</a>
+          </div>
+          <div class="recommended-row">
+            {% for item in menu_items %}
+            <div class="rec-card">
+              <div class="rec-card-img" style="background: {% cycle '#e8f5e9' '#fff3e0' '#fce4ec' '#e3f2fd' '#f3e5f5' '#e0f7fa' %};">
+                {% if item.image_url %}
+                <img src="{{ item.image_url }}" alt="{{ item.name }}">
+                {% else %}
+                <i data-lucide="coffee"></i>
+                {% endif %}
+              </div>
+              <div class="rec-card-body">
+                <h6>{{ item.name }}</h6>
+                <p class="text-muted small">{{ item.description|truncatewords:8 }}</p>
+                <div class="rec-card-footer">
+                  <span class="rec-price">₱{{ item.price }}</span>
+                  <form method="POST" action="/api/cart/add/" class="d-inline add-to-cart-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="item_id" value="{{ item.item_id }}">
+                    <input type="hidden" name="quantity" value="1">
+                    <button type="submit" class="add-btn">
+                      <i data-lucide="plus"></i>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+            {% empty %}
+            <div class="text-muted small py-3">No menu items available yet.</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="order-banner">
+          <button type="button" class="order-btn" onclick="location.href='/menu/'">Order now</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="landing-sidebar">
+      <div class="sidebar-card promo-sidebar">
+        <div class="promo-sidebar-badge">Special Offer</div>
+        <h5>Student Meal Deals</h5>
+        <p>Get fresh, affordable meals every day at the canteen. Healthy eating made easy.</p>
+        <a href="/menu/" class="promo-sidebar-btn">Shop now</a>
+      </div>
+
+      <div class="sidebar-card auth-sidebar-card">
+        <div class="auth-sidebar-header">
+          <i data-lucide="user"></i>
+          <span>Account</span>
+        </div>
+        <p class="text-muted small">Sign in to track orders, save favorites, and order faster.</p>
+        <div class="auth-sidebar-actions">
+          <a href="/login/" class="auth-sidebar-btn auth-sidebar-btn-primary">Sign in</a>
+          <a href="/register/" class="auth-sidebar-btn auth-sidebar-btn-secondary">Create account</a>
+        </div>
+      </div>
+
+      <div class="sidebar-card about-card">
+        <div class="section-header">
+          <h5>About the System</h5>
+        </div>
+        <p class="text-muted small">A canteen food ordering system that lets students and faculty order meals online, track orders in real-time, and skip the line.</p>
+        <div class="creator-section">
+          <div class="creator-avatar">
+            <i data-lucide="code"></i>
+          </div>
+          <div>
+            <strong>Built by</strong>
+            <p class="text-muted small mb-0">Cris Adrian C. Aquino</p>
+          </div>
+        </div>
+        <div class="creator-socials">
+            <a href="https://github.com/urboijano" class="social-link" aria-label="GitHub" target="_blank">
+            <i class="bi bi-github"></i>
+          </a>
+          <a href="https://www.facebook.com/fvkevrything" class="social-link" aria-label="Facebook" target="_blank">
+            <i class="bi bi-facebook"></i>
+          </a>
+          <a href="https://www.tiktok.com/@tiktoknibathala?lang=en" class="social-link" aria-label="TikTok" target="_blank">
+            <i class="bi bi-tiktok"></i>
+          </a>
+        </div>
+      </div>
+
+
+    </div>
+  </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+lucide.createIcons();
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (isAuthenticated()) {
+    apiGet('/api/cart/').then(data => {
+      if (data && data.items) {
+        const count = data.items.reduce((s, i) => s + i.quantity, 0);
+        document.getElementById('navCartCount').textContent = count;
+      }
+    });
+  }
+
+  document.querySelectorAll('.add-to-cart-form').forEach(form => {
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      if (!isAuthenticated()) { window.location.href = '/login/'; return; }
+      const formData = new FormData(this);
+      const countEl = document.getElementById('navCartCount');
+      const result = await apiPost('/api/cart/add/', {
+        item_id: parseInt(formData.get('item_id')),
+        quantity: parseInt(formData.get('quantity'))
+      });
+      if (result && result.items) {
+        const count = result.items.reduce((s, i) => s + i.quantity, 0);
+        countEl.textContent = count;
+      }
+    });
+  });
+});
+</script>
 {% endblock %}

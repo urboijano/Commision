@@ -1,77 +1,105 @@
 {% extends 'base.html' %}
-{% block title %}Login - Food Ordering{% endblock %}
+{% block title %}Login - NagkaonKanaLab{% endblock %}
 {% block content %}
-{% if user.is_authenticated %}
-<div class="text-center py-5">
-    <div class="auth-avatar mx-auto mb-3">
-        <i class="bi bi-person-check"></i>
+<style>
+  .navbar { display: none !important; }
+  body > .container, body .py-4 { max-width: none; padding: 0 !important; }
+
+  .auth-input {
+    border: none;
+    background: #f3f4f6;
+    box-shadow: none;
+    color: #1a1a1a;
+  }
+  .auth-input:focus {
+    border-color: transparent;
+    background: #e5e7eb;
+    box-shadow: none;
+  }
+  .auth-input:focus ~ .auth-input-icon svg {
+    color: #1a1a1a;
+  }
+  .auth-input:focus ~ .auth-label,
+  .auth-input:not(:placeholder-shown) ~ .auth-label {
+    color: #1a1a1a;
+  }
+  .auth-input-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    color: #6b7280;
+  }
+  .auth-label {
+    color: #6b7280;
+  }
+    
+</style>
+<div class="landing-bg" style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+  <div id="alertContainer"></div>
+  <div style="width: 100%; max-width: 420px;">
+    <div style="text-align: center; margin-bottom: 1.5rem;">
+      <div class="brand-mark" style="justify-content: center; font-size: 1.6rem;">
+        NagkaonKanaLab <i data-lucide="utensils-crossed" class="brand-icon"></i>
+      </div>
     </div>
-    <h4 class="mt-3">You are already logged in</h4>
-    <p class="text-muted">{{ user.full_name }} ({{ user.email }})</p>
-    <a href="/menu/" class="btn btn-primary px-4">
-        <i class="bi bi-menu-app"></i> Browse Menu
-    </a>
-</div>
-{% else %}
-<div class="auth-wrapper">
-    <div class="auth-card-modern">
-        <div class="auth-card-header">
-            <div class="auth-icon">
-                <i class="bi bi-box-arrow-in-right"></i>
-            </div>
-            <h3>Welcome Back</h3>
-            <p class="auth-subtitle">Sign in to your account</p>
+    <div class="sidebar-card" style="padding: 2rem;">
+      {% if user.is_authenticated %}
+      <div class="text-center py-4">
+        <div class="quick-card-icon" style="margin: 0 auto 1rem; width: 56px; height: 56px; font-size: 1.5rem; background: #ccff00;">
+          <i data-lucide="circle-check"></i>
         </div>
-        <div class="auth-card-body">
-            <form id="loginForm" novalidate>
-                <div class="auth-field">
-                    <div class="auth-input-group">
-                        <i class="bi bi-envelope-fill auth-input-icon"></i>
-                        <input type="email" class="auth-input" id="email" required placeholder=" " autocomplete="email">
-                        <label class="auth-label" for="email">Email address</label>
-                    </div>
-                    <div class="invalid-feedback">Please enter a valid email address.</div>
-                </div>
-                <div class="auth-field">
-                    <div class="auth-input-group">
-                        <i class="bi bi-lock-fill auth-input-icon"></i>
-                        <input type="password" class="auth-input" id="password" required minlength="1" placeholder=" " autocomplete="current-password">
-                        <label class="auth-label" for="password">Password</label>
-                        <button class="auth-pw-toggle" type="button" id="togglePassword" tabindex="-1">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                    </div>
-                    <div class="invalid-feedback">Password is required.</div>
-                </div>
-                <button type="submit" class="auth-btn" id="loginBtn">
-                    <span id="loginSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
-                    Sign In
-                </button>
-            </form>
-            <div class="auth-divider">
-                <span>or continue with</span>
-            </div>
-            <div class="auth-social">
-                <button type="button" class="auth-social-btn" title="Google">
-                    <i class="bi bi-google"></i>
-                </button>
-                <button type="button" class="auth-social-btn" title="Microsoft">
-                    <i class="bi bi-microsoft"></i>
-                </button>
-                <button type="button" class="auth-social-btn" title="GitHub">
-                    <i class="bi bi-github"></i>
-                </button>
-            </div>
-            <p class="auth-footer-text">
-                Don't have an account? <a href="/register/">Create one</a>
-            </p>
+        <h4 class="mt-3">You are already logged in</h4>
+        <p class="text-muted">{{ user.full_name }} ({{ user.email }})</p>
+        <a href="/menu/" class="order-btn" style="display: inline-block; width: auto; padding: 0.75rem 2rem; text-decoration: none;">
+          Browse Menu
+        </a>
+      </div>
+      {% else %}
+      <form id="loginForm" novalidate>
+        <div class="auth-field">
+          <div class="auth-input-group">
+            <span class="auth-input-icon"><i data-lucide="mail" style="width: 18px; height: 18px;"></i></span>
+            <input type="email" class="auth-input" id="email" required placeholder=" " autocomplete="email">
+            <label class="auth-label" for="email">Email Address</label>
+          </div>
+          <div class="invalid-feedback">Please enter a valid email address.</div>
         </div>
+        <div class="auth-field">
+          <div class="auth-input-group">
+            <span class="auth-input-icon"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
+            <input type="password" class="auth-input" id="password" required minlength="1" placeholder=" " autocomplete="current-password">
+            <label class="auth-label" for="password">Password</label>
+            <button class="auth-pw-toggle" type="button" id="togglePassword" tabindex="-1">
+              <i class="bi bi-eye-slash"></i>
+            </button>
+          </div>
+          <div class="invalid-feedback">Password is required.</div>
+          <div style="text-align: right; margin-top: 0.35rem;">
+            <a href="#" style="font-size: 0.8rem; color: #6b7280; text-decoration: underline;">Forgot Password?</a>
+          </div>
+        </div>
+
+        <button type="submit" class="order-btn" id="loginBtn" style="border-radius: 12px; padding: 0.85rem; font-size: 1rem; margin-top: 0.5rem;">
+          <span id="loginSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+          Sign In
+        </button>
+
+        <a href="/register/" class="auth-btn-outline">
+          Sign Up for new accounts
+        </a>
+
+          </form>
+      {% endif %}
     </div>
+  </div>
 </div>
-{% endif %}
 {% endblock %}
 {% block scripts %}
 <script>
+lucide.createIcons();
+
 document.addEventListener('DOMContentLoaded', function () {
     const toggleBtn = document.getElementById('togglePassword');
     const pwInput = document.getElementById('password');
@@ -84,10 +112,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const icon = this.querySelector('i');
             if (pwInput.type === 'password') {
                 pwInput.type = 'text';
-                icon.classList.replace('bi-eye', 'bi-eye-slash');
+                icon.classList.replace('bi-eye-slash', 'bi-eye');
             } else {
                 pwInput.type = 'password';
-                icon.classList.replace('bi-eye-slash', 'bi-eye');
+                icon.classList.replace('bi-eye', 'bi-eye-slash');
             }
         });
     }

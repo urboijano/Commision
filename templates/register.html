@@ -1,84 +1,129 @@
 {% extends 'base.html' %}
-{% block title %}Create Account - Food Ordering{% endblock %}
+{% block title %}Create Account - NagkaonKanaLab{% endblock %}
 {% block content %}
-<div class="auth-wrapper">
-    <div class="auth-card-modern">
-        <div class="auth-card-header">
-            <div class="auth-icon">
-                <i class="bi bi-person-plus"></i>
-            </div>
-            <h3>Create Account</h3>
-            <p class="auth-subtitle">Join us and start ordering</p>
-        </div>
-        <div class="auth-card-body">
-            <form id="registerForm">
-                <div class="auth-field">
-                    <div class="auth-input-group">
-                        <i class="bi bi-person-fill auth-input-icon"></i>
-                        <input type="text" class="auth-input" id="fullName" required maxlength="100" placeholder=" " autocomplete="name">
-                        <label class="auth-label" for="fullName">Full Name</label>
-                    </div>
-                </div>
-                <div class="auth-field">
-                    <label class="auth-field-label">User Type</label>
-                    <div class="auth-toggle-group">
-                        <input type="radio" name="userType" id="typeStudent" value="student" checked hidden>
-                        <label class="auth-toggle-btn active" for="typeStudent" data-value="student">
-                            <i class="bi bi-mortarboard-fill"></i> Student
-                        </label>
-                        <input type="radio" name="userType" id="typeFaculty" value="faculty" hidden>
-                        <label class="auth-toggle-btn" for="typeFaculty" data-value="faculty">
-                            <i class="bi bi-person-workspace"></i> Faculty
-                        </label>
-                    </div>
-                </div>
-                <div class="auth-field">
-                    <div class="auth-input-group">
-                        <i class="bi bi-person-vcard-fill auth-input-icon"></i>
-                        <input type="text" class="auth-input" id="studentId" required maxlength="30" placeholder=" " autocomplete="off">
-                        <label class="auth-label" for="studentId">Student / Faculty ID</label>
-                    </div>
-                    <div class="auth-hint">Enter your valid school ID number (e.g. 00-00001 or F-0001).</div>
-                </div>
-                <div class="auth-field">
-                    <div class="auth-input-group">
-                        <i class="bi bi-envelope-fill auth-input-icon"></i>
-                        <input type="email" class="auth-input" id="email" required placeholder=" " autocomplete="email">
-                        <label class="auth-label" for="email">Email</label>
-                    </div>
-                </div>
-                <div class="auth-field">
-                    <div class="auth-input-group">
-                        <i class="bi bi-lock-fill auth-input-icon"></i>
-                        <input type="password" class="auth-input" id="password" required minlength="8" placeholder=" " autocomplete="new-password">
-                        <label class="auth-label" for="password">Password</label>
-                    </div>
-                    <div class="auth-hint">Must have 8+ characters, uppercase, lowercase, digit, and special character.</div>
-                    <div class="auth-strength-bar">
-                        <div id="pwStrength" class="auth-strength-fill"></div>
-                    </div>
-                </div>
-                <div class="auth-field">
-                    <div class="auth-input-group">
-                        <i class="bi bi-lock-fill auth-input-icon"></i>
-                        <input type="password" class="auth-input" id="confirmPassword" required placeholder=" " autocomplete="new-password">
-                        <label class="auth-label" for="confirmPassword">Confirm Password</label>
-                    </div>
-                </div>
-                <button type="submit" class="auth-btn" id="registerBtn">
-                    <span id="registerSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
-                    Create Account
-                </button>
-            </form>
-            <p class="auth-footer-text">
-                Already have an account? <a href="/login/">Sign in</a>
-            </p>
-        </div>
+<style>
+  .navbar { display: none !important; }
+  body > .container, body .py-4 { max-width: none; padding: 0 !important; }
+
+  .auth-input {
+    border: none;
+    background: #f3f4f6;
+    box-shadow: none;
+    color: #1a1a1a;
+  }
+  .auth-input:focus {
+    border-color: transparent;
+    background: #e5e7eb;
+    box-shadow: none;
+  }
+  .auth-input:focus ~ .auth-input-icon svg {
+    color: #1a1a1a;
+  }
+  .auth-input:focus ~ .auth-label,
+  .auth-input:not(:placeholder-shown) ~ .auth-label {
+    color: #1a1a1a;
+  }
+  .auth-input-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    color: #6b7280;
+  }
+  .auth-label {
+    color: #6b7280;
+  }
+    
+</style>
+<div class="landing-bg" style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+  <div id="alertContainer"></div>
+  <div style="width: 100%; max-width: 560px;">
+    <div style="text-align: center; margin-bottom: 1.5rem;">
+      <div class="brand-mark" style="justify-content: center; font-size: 1.6rem;">
+        NagkaonKanaLab <i data-lucide="utensils-crossed" class="brand-icon"></i>
+      </div>
     </div>
+    <div class="sidebar-card" style="padding: 2rem;">
+      <form id="registerForm">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem;">
+          <div class="auth-field">
+            <div class="auth-input-group">
+              <span class="auth-input-icon"><i data-lucide="user" style="width: 18px; height: 18px;"></i></span>
+              <input type="text" class="auth-input" id="fullName" required maxlength="100" pattern="[A-Za-zÀ-ÿ\s]+" title="Letters only" placeholder=" " autocomplete="name" oninput="this.value = this.value.replace(/[0-9]/g, '')">
+              <label class="auth-label" for="fullName">Full Name</label>
+            </div>
+          </div>
+          <div class="auth-field">
+            <div class="auth-input-group">
+              <span class="auth-input-icon"><i data-lucide="badge-check" style="width: 18px; height: 18px;"></i></span>
+              <input type="text" class="auth-input" id="studentId" required maxlength="30" placeholder=" " autocomplete="off">
+              <label class="auth-label" for="studentId">Student / Faculty ID</label>
+            </div>
+            <div class="auth-hint">e.g. 00-00001 or F-0001</div>
+          </div>
+        </div>
+
+        <div class="auth-field">
+          <label class="auth-field-label">User Type</label>
+          <div class="auth-toggle-group">
+            <input type="radio" name="userType" id="typeStudent" value="student" checked hidden>
+            <label class="auth-toggle-btn active" for="typeStudent" data-value="student">
+              <i class="bi bi-mortarboard-fill"></i> Student
+            </label>
+            <input type="radio" name="userType" id="typeFaculty" value="faculty" hidden>
+            <label class="auth-toggle-btn" for="typeFaculty" data-value="faculty">
+              <i class="bi bi-person-workspace"></i> Faculty
+            </label>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem;">
+          <div class="auth-field">
+            <div class="auth-input-group">
+              <span class="auth-input-icon"><i data-lucide="mail" style="width: 18px; height: 18px;"></i></span>
+              <input type="email" class="auth-input" id="email" required placeholder=" " autocomplete="email">
+              <label class="auth-label" for="email">Email</label>
+            </div>
+          </div>
+          <div class="auth-field">
+            <div class="auth-input-group">
+              <span class="auth-input-icon"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
+              <input type="password" class="auth-input" id="password" required minlength="8" placeholder=" " autocomplete="new-password">
+              <label class="auth-label" for="password">Password</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="auth-hint" style="margin-top: -0.75rem; margin-bottom: 0.25rem;">Must have 8+ characters, uppercase, lowercase, digit, and special character.</div>
+        <div class="auth-strength-bar" style="margin-bottom: 1rem;">
+          <div id="pwStrength" class="auth-strength-fill"></div>
+        </div>
+
+        <div class="auth-field">
+          <div class="auth-input-group">
+            <span class="auth-input-icon"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
+            <input type="password" class="auth-input" id="confirmPassword" required placeholder=" " autocomplete="new-password">
+            <label class="auth-label" for="confirmPassword">Confirm Password</label>
+          </div>
+        </div>
+
+        <button type="submit" class="order-btn" id="registerBtn" style="border-radius: 12px; padding: 0.85rem; font-size: 1rem; margin-top: 0.5rem;">
+          <span id="registerSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+          Create Account
+        </button>
+        <a href="/login/" class="auth-btn-outline">
+          Already have an account? Sign in
+        </a>
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
+lucide.createIcons();
+
 function checkPasswordStrength(pw) {
     let score = 0;
     if (pw.length >= 8) score += 25;
@@ -89,64 +134,68 @@ function checkPasswordStrength(pw) {
     return score;
 }
 
-const pwInput = document.getElementById('password');
-if (pwInput) {
-    pwInput.addEventListener('input', function() {
-        const score = checkPasswordStrength(this.value);
-        const bar = document.getElementById('pwStrength');
-        bar.style.width = score + '%';
-        if (score < 50) {
-            bar.style.background = '#ef4444';
-        } else if (score < 75) {
-            bar.style.background = '#f59e0b';
+document.addEventListener('DOMContentLoaded', function () {
+    const pwInput = document.getElementById('password');
+    if (pwInput) {
+        pwInput.addEventListener('input', function() {
+            const score = checkPasswordStrength(this.value);
+            const bar = document.getElementById('pwStrength');
+            if (bar) {
+                bar.style.width = score + '%';
+                if (score < 50) {
+                    bar.style.background = '#ef4444';
+                } else if (score < 75) {
+                    bar.style.background = '#f59e0b';
+                } else {
+                    bar.style.background = '#10b981';
+                }
+            }
+        });
+    }
+
+    document.querySelectorAll('.auth-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.auth-toggle-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    document.getElementById('registerForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('registerBtn');
+        const spinner = document.getElementById('registerSpinner');
+        btn.disabled = true;
+        spinner.classList.remove('d-none');
+
+        const password = document.getElementById('password').value;
+        const confirm = document.getElementById('confirmPassword').value;
+
+        if (password !== confirm) {
+            showAlert('Passwords do not match.', 'danger');
+            btn.disabled = false;
+            spinner.classList.add('d-none');
+            return;
+        }
+
+        const userType = document.querySelector('input[name="userType"]:checked').value;
+
+        const result = await apiPost('/api/auth/register/', {
+            full_name: document.getElementById('fullName').value,
+            student_faculty_id: document.getElementById('studentId').value,
+            user_type: userType,
+            email: document.getElementById('email').value,
+            password: password,
+        });
+
+        if (result && result.tokens) {
+            setTokens(result.tokens.access, result.tokens.refresh);
+            setUser(result.user);
+            window.location.href = '/menu/';
         } else {
-            bar.style.background = '#10b981';
+            btn.disabled = false;
+            spinner.classList.add('d-none');
         }
     });
-}
-
-document.querySelectorAll('.auth-toggle-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.auth-toggle-btn').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-    });
-});
-
-document.getElementById('registerForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const btn = document.getElementById('registerBtn');
-    const spinner = document.getElementById('registerSpinner');
-    btn.disabled = true;
-    spinner.classList.remove('d-none');
-
-    const password = document.getElementById('password').value;
-    const confirm = document.getElementById('confirmPassword').value;
-
-    if (password !== confirm) {
-        showAlert('Passwords do not match.', 'danger');
-        btn.disabled = false;
-        spinner.classList.add('d-none');
-        return;
-    }
-
-    const userType = document.querySelector('input[name="userType"]:checked').value;
-
-    const result = await apiPost('/api/auth/register/', {
-        full_name: document.getElementById('fullName').value,
-        student_faculty_id: document.getElementById('studentId').value,
-        user_type: userType,
-        email: document.getElementById('email').value,
-        password: password,
-    });
-
-    if (result && result.tokens) {
-        setTokens(result.tokens.access, result.tokens.refresh);
-        setUser(result.user);
-        window.location.href = '/menu/';
-    } else {
-        btn.disabled = false;
-        spinner.classList.add('d-none');
-    }
 });
 </script>
 {% endblock %}
