@@ -1,3 +1,5 @@
+import re
+
 from rest_framework import serializers
 from .models import (
     User, ValidID, MenuItem, Cart, CartItem,
@@ -16,14 +18,66 @@ class RegisterSerializer(serializers.Serializer):
     student_faculty_id = serializers.CharField(max_length=30)
     user_type = serializers.ChoiceField(choices=['student', 'faculty'])
     email = serializers.EmailField()
-    password = serializers.CharField(write_only=True, min_length=8)
+    password = serializers.CharField(write_only=True)
+
+    def validate_password(self, value):
+        errors = []
+        if len(value) < 8:
+            errors.append('at least 8 characters')
+        if not re.search(r'[A-Z]', value):
+            errors.append('an uppercase letter')
+        if not re.search(r'[a-z]', value):
+            errors.append('a lowercase letter')
+        if not re.search(r'\d', value):
+            errors.append('a digit')
+        if not re.search(r'[^A-Za-z0-9]', value):
+            errors.append('a special character')
+        if errors:
+            raise serializers.ValidationError(
+                f'Password must contain {", ".join(errors)}.'
+            )
+        return value
+
+    def validate_full_name(self, value):
+        value = value.strip()
+        if not re.match(r'^[A-Za-zÀ-ÿ\s.]+,\s[A-Za-zÀ-ÿ\s.]+$', value):
+            raise serializers.ValidationError(
+                'Full name must be in the format: Surname, First Name Middle Initial (e.g. Dela Cruz, Juan P.)'
+            )
+        return value
 
 
 class StoreRegisterSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=100)
     store_name = serializers.CharField(max_length=200)
     email = serializers.EmailField()
-    password = serializers.CharField(write_only=True, min_length=8)
+    password = serializers.CharField(write_only=True)
+
+    def validate_password(self, value):
+        errors = []
+        if len(value) < 8:
+            errors.append('at least 8 characters')
+        if not re.search(r'[A-Z]', value):
+            errors.append('an uppercase letter')
+        if not re.search(r'[a-z]', value):
+            errors.append('a lowercase letter')
+        if not re.search(r'\d', value):
+            errors.append('a digit')
+        if not re.search(r'[^A-Za-z0-9]', value):
+            errors.append('a special character')
+        if errors:
+            raise serializers.ValidationError(
+                f'Password must contain {", ".join(errors)}.'
+            )
+        return value
+
+    def validate_full_name(self, value):
+        value = value.strip()
+        if not re.match(r'^[A-Za-zÀ-ÿ\s.]+,\s[A-Za-zÀ-ÿ\s.]+$', value):
+            raise serializers.ValidationError(
+                'Full name must be in the format: Surname, First Name Middle Initial (e.g. Dela Cruz, Juan P.)'
+            )
+        return value
 
 
 class ForgotPasswordSerializer(serializers.Serializer):

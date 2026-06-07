@@ -39,7 +39,9 @@
   }
 </style>
 <div class="landing-bg" style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
-  <div id="alertContainer"></div>
+  <a href="/" style="position:fixed;top:20px;left:20px;z-index:1000;width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:#fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.1);color:#1a1a1a;text-decoration:none;transition:background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#fff'">
+    <i class="bi bi-arrow-left" style="font-size:1.2rem;"></i>
+  </a>
   <div style="width: 100%; max-width: 560px;">
     <div style="text-align: center; margin-bottom: 1.5rem;">
       <div class="brand-mark" style="justify-content: center; font-size: 1.6rem;">
@@ -52,17 +54,18 @@
           <div class="auth-field">
             <div class="auth-input-group">
               <span class="auth-input-icon"><i data-lucide="user" style="width: 18px; height: 18px;"></i></span>
-              <input type="text" class="auth-input" id="fullName" required maxlength="100" pattern="[A-Za-zÀ-ÿ\s]+" title="Letters only" placeholder=" " autocomplete="name" oninput="this.value = this.value.replace(/[0-9]/g, '')">
+              <input type="text" class="auth-input" id="fullName" required maxlength="100" pattern="[A-Za-zÀ-ÿ\s.]+,\s[A-Za-zÀ-ÿ\s.]+" title="Format: Surname, First Name M.I." placeholder=" " autocomplete="name" oninput="this.value = this.value.replace(/[0-9]/g, '')">
               <label class="auth-label" for="fullName">Full Name</label>
             </div>
+            <div class="auth-hint">Format: Surname, First Name M.I. (e.g. Dela Cruz, Juan P.)</div>
           </div>
           <div class="auth-field">
             <div class="auth-input-group">
               <span class="auth-input-icon"><i data-lucide="badge-check" style="width: 18px; height: 18px;"></i></span>
-              <input type="text" class="auth-input" id="studentId" required maxlength="30" placeholder=" " autocomplete="off">
+              <input type="text" class="auth-input" id="studentId" required maxlength="30" pattern="[-\d]+" title="Digits and hyphens only" placeholder=" " autocomplete="off" oninput="this.value = this.value.replace(/[^0-9-]/g, '')">
               <label class="auth-label" for="studentId">Student / Faculty ID</label>
             </div>
-            <div class="auth-hint">e.g. 00-00001 or F-0001</div>
+              <div class="auth-hint">Enter your school-issued student or faculty ID</div>
           </div>
         </div>
 
@@ -99,11 +102,14 @@
               <span class="auth-input-icon"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
               <input type="password" class="auth-input" id="password" required minlength="8" placeholder=" " autocomplete="new-password">
               <label class="auth-label" for="password">Password</label>
+              <button class="auth-pw-toggle" type="button" data-target="password" tabindex="-1">
+                <i class="bi bi-eye-slash"></i>
+              </button>
             </div>
           </div>
         </div>
 
-        <div class="auth-hint" style="margin-top: -0.75rem; margin-bottom: 0.25rem;">Must have 8+ characters, uppercase, lowercase, digit, and special character.</div>
+        <div class="auth-hint" style="margin-top: -0.75rem;">Must have 8+ characters, uppercase, lowercase, digit, and special character.</div>
         <div class="auth-strength-bar" style="margin-bottom: 1rem;">
           <div id="pwStrength" class="auth-strength-fill"></div>
         </div>
@@ -113,6 +119,9 @@
             <span class="auth-input-icon"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
             <input type="password" class="auth-input" id="confirmPassword" required placeholder=" " autocomplete="new-password">
             <label class="auth-label" for="confirmPassword">Confirm Password</label>
+            <button class="auth-pw-toggle" type="button" data-target="confirmPassword" tabindex="-1">
+              <i class="bi bi-eye-slash"></i>
+            </button>
           </div>
         </div>
 
@@ -132,34 +141,48 @@
 <script>
 lucide.createIcons();
 
-function checkPasswordStrength(pw) {
-    let score = 0;
-    if (pw.length >= 8) score += 25;
-    if (/[A-Z]/.test(pw)) score += 25;
-    if (/[a-z]/.test(pw)) score += 25;
-    if (/\d/.test(pw)) score += 12.5;
-    if (/[^A-Za-z0-9]/.test(pw)) score += 12.5;
-    return score;
+function checkPasswordCriteria(pw) {
+    return {
+        length: pw.length >= 8,
+        upper: /[A-Z]/.test(pw),
+        lower: /[a-z]/.test(pw),
+        digit: /\d/.test(pw),
+        special: /[^A-Za-z0-9]/.test(pw),
+    };
 }
 
 document.addEventListener('DOMContentLoaded', function () {
     const pwInput = document.getElementById('password');
     if (pwInput) {
         pwInput.addEventListener('input', function() {
-            const score = checkPasswordStrength(this.value);
+            const criteria = checkPasswordCriteria(this.value);
+            const values = Object.values(criteria);
+            const met = values.filter(Boolean).length;
+            const total = values.length;
+            const pct = (met / total) * 100;
+
             const bar = document.getElementById('pwStrength');
             if (bar) {
-                bar.style.width = score + '%';
-                if (score < 50) {
-                    bar.style.background = '#ef4444';
-                } else if (score < 75) {
-                    bar.style.background = '#f59e0b';
-                } else {
-                    bar.style.background = '#10b981';
-                }
+                bar.style.width = pct + '%';
+                bar.style.background = pct === 100 ? '#10b981' : '#ef4444';
             }
+
         });
     }
+
+    document.querySelectorAll('.auth-pw-toggle').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const input = document.getElementById(this.dataset.target);
+            const icon = this.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('bi-eye-slash', 'bi-eye');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('bi-eye', 'bi-eye-slash');
+            }
+        });
+    });
 
     document.querySelectorAll('.auth-toggle-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -177,6 +200,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const password = document.getElementById('password').value;
         const confirm = document.getElementById('confirmPassword').value;
+        const criteria = checkPasswordCriteria(password);
+        const allMet = Object.values(criteria).every(Boolean);
+
+        if (!allMet) {
+            showAlert('Password must have 8+ characters, an uppercase letter, a lowercase letter, a digit, and a special character.', 'danger');
+            btn.disabled = false;
+            spinner.classList.add('d-none');
+            return;
+        }
 
         if (password !== confirm) {
             showAlert('Passwords do not match.', 'danger');

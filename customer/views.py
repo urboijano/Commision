@@ -43,18 +43,6 @@ def register(request):
 
     data = serializer.validated_data
 
-    id_record = ValidID.objects.filter(
-        id_value=data['student_faculty_id'],
-        user_type=data['user_type'],
-        is_used=False
-    ).first()
-
-    if not id_record:
-        return Response(
-            {'error': 'Invalid ID. Please verify your credentials and try again.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
     if User.objects.filter(email=data['email']).exists():
         return Response(
             {'error': 'An account with this email already exists.'},
@@ -62,9 +50,6 @@ def register(request):
         )
 
     with transaction.atomic():
-        id_record.is_used = True
-        id_record.save()
-
         user = User.objects.create_user(
             username=data['email'],
             email=data['email'],

@@ -99,21 +99,27 @@ async function refreshAccessToken() {
 }
 
 function showAlert(message, type = 'danger') {
-    const container = document.getElementById('alertContainer');
-    if (!container) return;
+    const icons = { danger: 'bi-exclamation-circle', success: 'bi-check-circle', warning: 'bi-exclamation-triangle', info: 'bi-info-circle' };
+    const icon = icons[type] || icons.danger;
 
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type} alert-dismissible fade show`;
-    alert.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    container.appendChild(alert);
+    const el = document.createElement('div');
+    el.style.cssText = 'display:flex;align-items:center;gap:12px;position:fixed;bottom:30px;right:30px;background:#1a1a1a;color:#fff;padding:16px 20px;border-radius:16px;font-size:14px;font-weight:500;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,0.2);max-width:420px;word-wrap:break-word;line-height:1.5;';
+    el.innerHTML = '<i class="' + icon + '" style="font-size:18px;flex-shrink:0;"></i><span style="flex:1;">' + message + '</span>';
 
-    setTimeout(() => {
-        alert.classList.remove('show');
-        setTimeout(() => alert.remove(), 300);
-    }, 5000);
+    document.body.appendChild(el);
+
+    setTimeout(function() { el.remove(); }, 5000);
+}
+
+function extractError(result) {
+    if (typeof result === 'string') return result;
+    if (result?.error) return result.error;
+    if (result?.detail) return result.detail;
+    if (result && typeof result === 'object') {
+        const msgs = Object.values(result).flat().filter(Boolean);
+        if (msgs.length) return msgs.join(' ');
+    }
+    return 'Request failed';
 }
 
 async function apiGet(url) {
@@ -121,7 +127,7 @@ async function apiGet(url) {
     if (!response) return null;
     if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        showAlert(err.error || err.detail || 'Request failed', 'danger');
+        showAlert(extractError(err), 'danger');
         return null;
     }
     return response.json();
@@ -135,7 +141,7 @@ async function apiPost(url, data) {
     if (!response) return null;
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
-        showAlert(result.error || JSON.stringify(result) || 'Request failed', 'danger');
+        showAlert(extractError(result), 'danger');
         return null;
     }
     return result;
@@ -149,7 +155,7 @@ async function apiPatch(url, data) {
     if (!response) return null;
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
-        showAlert(result.error || 'Request failed', 'danger');
+        showAlert(extractError(result), 'danger');
         return null;
     }
     return result;
