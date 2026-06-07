@@ -4,7 +4,10 @@ from . import views
 
 urlpatterns = [
     path('api/auth/register/', views.register, name='register'),
+    path('api/auth/register/store/', views.store_register, name='store-register'),
     path('api/auth/login/', views.login, name='login'),
+    path('api/auth/forgot-password/', views.forgot_password, name='forgot-password'),
+    path('api/auth/reset-password/', views.reset_password, name='reset-password'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('api/auth/me/', views.me, name='me'),
     path('api/menu/', views.menu_list, name='menu-list'),
@@ -21,9 +24,20 @@ urlpatterns = [
     path('api/seed/ids/', views.seed_valid_ids, name='seed-ids'),
     path('api/admin/orders/<uuid:order_id>/status/', views.force_order_status, name='force-order-status'),
 
+    path('api/store/orders/', views.store_orders, name='store-orders'),
+    path('api/store/orders/<uuid:order_id>/status/', views.store_update_order_status, name='store-order-status'),
+    path('api/store/menu/', views.store_all_menu_items, name='store-menu-list'),
+    path('api/store/menu/create/', views.store_create_menu_item, name='store-menu-create'),
+    path('api/store/menu/<int:item_id>/', views.store_update_menu_item, name='store-menu-update'),
+    path('api/store/menu/<int:item_id>/delete/', views.store_delete_menu_item, name='store-menu-delete'),
+
     path('', views.landing_page, name='landing'),
     path('login/', views.login_page, name='login-page'),
+    path('forgot-password/', views.forgot_password_page, name='forgot-password-page'),
+    path('reset-password/', views.reset_password_page, name='reset-password-page'),
     path('register/', views.register_page, name='register-page'),
+    path('register/store/', views.store_register_page, name='store-register-page'),
+    path('dashboard/', views.store_dashboard_page, name='store-dashboard-page'),
     path('menu/', views.menu_page, name='menu-page'),
     path('cart/', views.cart_page, name='cart-page'),
     path('orders/', views.my_orders_page, name='my-orders-page'),

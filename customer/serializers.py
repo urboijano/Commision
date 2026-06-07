@@ -5,11 +5,34 @@ from .models import (
 )
 
 
+class StoreSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MenuItem
+        fields = '__all__'
+
+
 class RegisterSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=100)
     student_faculty_id = serializers.CharField(max_length=30)
     user_type = serializers.ChoiceField(choices=['student', 'faculty'])
     email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, min_length=8)
+
+
+class StoreRegisterSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=100)
+    store_name = serializers.CharField(max_length=200)
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True, min_length=8)
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=6)
     password = serializers.CharField(write_only=True, min_length=8)
 
 
@@ -21,7 +44,7 @@ class LoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['user_id', 'full_name', 'email', 'user_type', 'student_faculty_id']
+        fields = ['user_id', 'full_name', 'email', 'user_type', 'student_faculty_id', 'store_name']
 
 
 class MenuItemSerializer(serializers.ModelSerializer):
@@ -85,13 +108,14 @@ class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     status_history = OrderStatusHistorySerializer(many=True, read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    user = UserSerializer(read_only=True)
 
     class Meta:
         model = Order
         fields = [
             'order_id', 'order_number', 'total_amount', 'status',
             'status_display', 'payment_status', 'items', 'status_history',
-            'notes', 'created_at', 'updated_at'
+            'notes', 'created_at', 'updated_at', 'user'
         ]
 
 

@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% block title %}Store Owner Registration - NagkaonKanaLab{% endblock %}
+{% block content %}
+<style>
+  .navbar { display: none !important; }
+  body > .container, body .py-4 { max-width: none; padding: 0 !important; }
+  .auth-label { color: #000 !important; }
+  .auth-field:focus-within .auth-label,
+  .auth-input:not(:placeholder-shown) ~ .auth-label { color: #000 !important; }
+</style>
+<div class="landing-bg" style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+  <div id="alertContainer"></div>
+  <div style="width: 100%; max-width: 560px;">
+    <div style="text-align: center; margin-bottom: 1.5rem;">
+      <div class="brand-mark" style="justify-content: center; font-size: 1.6rem;">
+        NagkaonKanaLab <i data-lucide="utensils-crossed" class="brand-icon"></i>
+      </div>
+    </div>
+    <div class="sidebar-card" style="padding: 2rem;">
+      <h4 style="text-align: center; margin-bottom: 1.5rem; font-weight: 700;">Store Owner Registration</h4>
+      <form id="storeRegisterForm">
+        <div class="auth-field">
+          <div class="auth-input-group">
+            <span class="auth-input-icon"><i data-lucide="user" style="width: 18px; height: 18px;"></i></span>
+            <input type="text" class="auth-input" id="fullName" required maxlength="100" placeholder=" " autocomplete="name">
+            <label class="auth-label" for="fullName">Full Name</label>
+          </div>
+        </div>
+
+        <div class="auth-field">
+          <div class="auth-input-group">
+            <span class="auth-input-icon"><i data-lucide="store" style="width: 18px; height: 18px;"></i></span>
+            <input type="text" class="auth-input" id="storeName" required maxlength="200" placeholder=" " autocomplete="off">
+            <label class="auth-label" for="storeName">Store Name</label>
+          </div>
+        </div>
+
+        <div class="auth-field">
+          <div class="auth-input-group">
+            <span class="auth-input-icon"><i data-lucide="mail" style="width: 18px; height: 18px;"></i></span>
+            <input type="email" class="auth-input" id="email" required placeholder=" " autocomplete="email">
+            <label class="auth-label" for="email">Email</label>
+          </div>
+        </div>
+
+        <div class="auth-field">
+          <div class="auth-input-group">
+            <span class="auth-input-icon"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
+            <input type="password" class="auth-input" id="password" required minlength="8" placeholder=" " autocomplete="new-password">
+            <label class="auth-label" for="password">Password</label>
+          </div>
+        </div>
+
+        <div class="auth-hint" style="margin-top: -0.75rem; margin-bottom: 0.25rem;">Must have 8+ characters, uppercase, lowercase, digit, and special character.</div>
+        <div class="auth-strength-bar" style="margin-bottom: 1rem;">
+          <div id="pwStrength" class="auth-strength-fill"></div>
+        </div>
+
+        <div class="auth-field">
+          <div class="auth-input-group">
+            <span class="auth-input-icon"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
+            <input type="password" class="auth-input" id="confirmPassword" required placeholder=" " autocomplete="new-password">
+            <label class="auth-label" for="confirmPassword">Confirm Password</label>
+          </div>
+        </div>
+
+        <button type="submit" class="order-btn" id="registerBtn" style="border-radius: 12px; padding: 0.85rem; font-size: 1rem; margin-top: 0.5rem;">
+          <span id="registerSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+          Create Store Account
+        </button>
+        <a href="/register/" class="auth-btn-outline">
+          Back to Student / Faculty Registration
+        </a>
+        <a href="/login/" class="auth-btn-outline" style="margin-top: 0.25rem;">
+          Already have an account? Sign in
+        </a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+lucide.createIcons();
+
+function checkPasswordStrength(pw) {
+    let score = 0;
+    if (pw.length >= 8) score += 25;
+    if (/[A-Z]/.test(pw)) score += 25;
+    if (/[a-z]/.test(pw)) score += 25;
+    if (/\d/.test(pw)) score += 12.5;
+    if (/[^A-Za-z0-9]/.test(pw)) score += 12.5;
+    return score;
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const pwInput = document.getElementById('password');
+    if (pwInput) {
+        pwInput.addEventListener('input', function() {
+            const score = checkPasswordStrength(this.value);
+            const bar = document.getElementById('pwStrength');
+            if (bar) {
+                bar.style.width = score + '%';
+                if (score < 50) bar.style.background = '#ef4444';
+                else if (score < 75) bar.style.background = '#f59e0b';
+                else bar.style.background = '#10b981';
+            }
+        });
+    }
+
+    document.getElementById('storeRegisterForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('registerBtn');
+        const spinner = document.getElementById('registerSpinner');
+        btn.disabled = true;
+        spinner.classList.remove('d-none');
+
+        const password = document.getElementById('password').value;
+        const confirm = document.getElementById('confirmPassword').value;
+
+        if (password !== confirm) {
+            showAlert('Passwords do not match.', 'danger');
+            btn.disabled = false;
+            spinner.classList.add('d-none');
+            return;
+        }
+
+        const result = await apiPost('/api/auth/register/store/', {
+            full_name: document.getElementById('fullName').value,
+            store_name: document.getElementById('storeName').value,
+            email: document.getElementById('email').value,
+            password: password,
+        });
+
+        if (result && result.tokens) {
+            setTokens(result.tokens.access, result.tokens.refresh);
+            setUser(result.user);
+            window.location.href = '/dashboard/';
+        } else {
+            btn.disabled = false;
+            spinner.classList.add('d-none');
+        }
+    });
+});
+</script>
+{% endblock %}

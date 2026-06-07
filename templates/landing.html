@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Canteen – Fresh Food, Fast{% endblock %}
+{% block title %}NagkaonKanaLab – Fresh Food, Fast{% endblock %}
 {% block content %}
 <style>
   .navbar { display: none !important; }
@@ -18,13 +18,7 @@
               <i data-lucide="search" class="search-icon"></i>
               <input type="text" class="search-input" placeholder="Search for meals...">
             </div>
-            <a href="{% if user.is_authenticated %}#{% else %}/login/{% endif %}" class="icon-btn">
-              <i data-lucide="circle-user"></i>
-            </a>
-            <a href="/cart/" class="cart-btn">
-              <i data-lucide="shopping-bag"></i>
-              <span class="cart-count-dot" id="navCartCount">0</span>
-            </a>
+
           </div>
         </div>
 

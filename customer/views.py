@@ -1,4 +1,5 @@
 import json
+import random
 from decimal import Decimal
 from django.db import transaction
 from django.shortcuts import get_object_or_404, render
@@ -12,14 +13,15 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import (
-    User, ValidID, MenuItem, Cart, CartItem,
+    User, ValidID, PasswordResetCode, MenuItem, Cart, CartItem,
     Order, OrderItem, OrderStatusHistory, Feedback
 )
 from .serializers import (
-    RegisterSerializer, LoginSerializer, UserSerializer,
+    RegisterSerializer, StoreRegisterSerializer, LoginSerializer, UserSerializer,
     MenuItemSerializer, CartSerializer, CartItemSerializer,
     AddCartItemSerializer, UpdateCartItemSerializer,
-    OrderSerializer, FeedbackSerializer, CreateFeedbackSerializer
+    OrderSerializer, FeedbackSerializer, CreateFeedbackSerializer,
+    ForgotPasswordSerializer, ResetPasswordSerializer
 )
 from .consumers import notify_order_status_change
 
@@ -81,6 +83,90 @@ def register(request):
         'user': UserSerializer(user).data,
         'tokens': tokens,
     }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def store_register(request):
+    serializer = StoreRegisterSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    data = serializer.validated_data
+
+    if User.objects.filter(email=data['email']).exists():
+        return Response(
+            {'error': 'An account with this email already exists.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user = User.objects.create_user(
+        username=data['email'],
+        email=data['email'],
+        password=data['password'],
+        full_name=data['full_name'],
+        store_name=data['store_name'],
+        user_type='store_owner',
+        student_faculty_id=None,
+    )
+
+    django_login(request, user)
+
+    tokens = get_tokens_for_user(user)
+    return Response({
+        'user': UserSerializer(user).data,
+        'tokens': tokens,
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def forgot_password(request):
+    serializer = ForgotPasswordSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    email = serializer.validated_data['email']
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return Response({'error': 'No account found with this email.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    PasswordResetCode.objects.filter(user=user, is_used=False).update(is_used=True)
+
+    code = f"{random.randint(100000, 999999)}"
+    PasswordResetCode.objects.create(user=user, code=code)
+
+    return Response({'message': 'Reset code sent.', 'code': code})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password(request):
+    serializer = ResetPasswordSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    data = serializer.validated_data
+    try:
+        user = User.objects.get(email=data['email'])
+    except User.DoesNotExist:
+        return Response({'error': 'Invalid request.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    reset_code = PasswordResetCode.objects.filter(
+        user=user, code=data['code'], is_used=False
+    ).first()
+
+    if not reset_code:
+        return Response({'error': 'Invalid or expired reset code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    reset_code.is_used = True
+    reset_code.save()
+
+    user.set_password(data['password'])
+    user.save()
+
+    return Response({'message': 'Password reset successfully.'})
 
 
 @api_view(['POST'])
@@ -381,6 +467,101 @@ def force_order_status(request, order_id):
     return Response(OrderSerializer(order).data)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def store_orders(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    orders = Order.objects.all().prefetch_related('items', 'status_history', 'user').order_by('-created_at')
+    serializer = OrderSerializer(orders, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def store_update_order_status(request, order_id):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    status_val = request.data.get('status')
+    if status_val not in dict(Order.STATUS_CHOICES):
+        return Response({'error': 'Invalid status.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    order = get_object_or_404(Order, order_id=order_id)
+
+    valid_transitions = {
+        'received': ['preparing'],
+        'preparing': ['ready_for_pickup'],
+    }
+
+    if order.status != status_val:
+        allowed = valid_transitions.get(order.status, [])
+        if status_val not in allowed and status_val != 'cancelled':
+            return Response(
+                {'error': f'Cannot transition from {order.status} to {status_val}.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        order.status = status_val
+        if status_val == 'completed':
+            order.payment_status = 'paid'
+        order.save()
+
+        OrderStatusHistory.objects.create(
+            order=order,
+            status=status_val,
+            changed_by='store_owner',
+        )
+
+        notify_order_status_change(order)
+
+    return Response(OrderSerializer(order).data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def store_create_menu_item(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    serializer = MenuItemSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def store_update_menu_item(request, item_id):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    item = get_object_or_404(MenuItem, item_id=item_id)
+    serializer = MenuItemSerializer(item, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def store_delete_menu_item(request, item_id):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    item = get_object_or_404(MenuItem, item_id=item_id)
+    item.delete()
+    return Response({'message': 'Menu item deleted.'})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def store_all_menu_items(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    items = MenuItem.objects.all().order_by('name')
+    serializer = MenuItemSerializer(items, many=True)
+    return Response(serializer.data)
+
+
 @ensure_csrf_cookie
 def landing_page(request):
     menu_items = MenuItem.objects.filter(is_available=True)[:8]
@@ -399,6 +580,28 @@ def login_page(request):
 @ensure_csrf_cookie
 def register_page(request):
     return render(request, 'register.html')
+
+
+@ensure_csrf_cookie
+def forgot_password_page(request):
+    return render(request, 'forgot_password.html')
+
+
+@ensure_csrf_cookie
+def reset_password_page(request):
+    return render(request, 'reset_password.html')
+
+
+@ensure_csrf_cookie
+def store_register_page(request):
+    return render(request, 'store_register.html')
+
+
+@login_required
+def store_dashboard_page(request):
+    if request.user.user_type != 'store_owner':
+        return render(request, 'store_register.html')
+    return render(request, 'store_dashboard.html')
 
 
 @login_required
