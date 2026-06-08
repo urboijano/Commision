@@ -8,6 +8,7 @@ class User(AbstractUser):
         ('student', 'Student'),
         ('faculty', 'Faculty'),
         ('store_owner', 'Store Owner'),
+        ('admin', 'Admin'),
     ]
     user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES)

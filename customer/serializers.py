@@ -96,9 +96,11 @@ class LoginSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    user_type_display = serializers.CharField(source='get_user_type_display', read_only=True)
+
     class Meta:
         model = User
-        fields = ['user_id', 'full_name', 'email', 'user_type', 'student_faculty_id', 'store_name']
+        fields = ['user_id', 'full_name', 'email', 'user_type', 'user_type_display', 'student_faculty_id', 'store_name', 'is_active', 'date_joined']
 
 
 class MenuItemSerializer(serializers.ModelSerializer):

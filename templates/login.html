@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Login - NagkaonKanaLab{% endblock %}
+{% block title %}Login - KaonISU{% endblock %}
 {% block content %}
 <style>
   .navbar { display: none !important; }
@@ -42,7 +42,7 @@
   <div style="width: 100%; max-width: 420px;">
     <div style="text-align: center; margin-bottom: 1.5rem;">
       <div class="brand-mark" style="justify-content: center; font-size: 1.6rem;">
-        NagkaonKanaLab <i data-lucide="utensils-crossed" class="brand-icon"></i>
+        KaonISU <i data-lucide="utensils-crossed" class="brand-icon"></i>
       </div>
     </div>
     <div class="sidebar-card" style="padding: 2rem;">
@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (result && result.tokens) {
                 setTokens(result.tokens.access, result.tokens.refresh);
                 setUser(result.user);
-                window.location.href = result.user.user_type === 'store_owner' ? '/dashboard/' : '/menu/';
+                window.location.href = result.user.user_type === 'store_owner' ? '/dashboard/' : result.user.user_type === 'admin' ? '/kaon-admin/' : '/menu/';
             } else {
                 loginBtn.disabled = false;
                 spinner.classList.add('d-none');

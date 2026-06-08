@@ -2,7 +2,8 @@ import json
 import random
 from decimal import Decimal
 from django.db import transaction
-from django.shortcuts import get_object_or_404, render
+from django.db.models import Sum
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth import authenticate, login as django_login
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -373,6 +374,23 @@ def submit_feedback(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def seed_admin(request):
+    if User.objects.filter(user_type='admin').exists():
+        return Response({'message': 'Admin already exists.'})
+    import uuid
+    User.objects.create_superuser(
+        username=f'admin-{uuid.uuid4().hex[:6]}',
+        email='admin@kaonisu.com',
+        password='admin123',
+        full_name='System Admin',
+        user_type='admin',
+        student_faculty_id=None,
+    )
+    return Response({'message': 'Admin user created. Email: admin@kaoisu.com, Password: admin123'})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def seed_menu(request):
     if MenuItem.objects.exists():
         return Response({'message': 'Menu already seeded.'})
@@ -547,6 +565,79 @@ def store_all_menu_items(request):
     return Response(serializer.data)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_stats(request):
+    if request.user.user_type != 'admin':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    total_users = User.objects.count()
+    total_students = User.objects.filter(user_type='student').count()
+    total_faculty = User.objects.filter(user_type='faculty').count()
+    total_stores = User.objects.filter(user_type='store_owner').count()
+    total_orders = Order.objects.count()
+    total_revenue = Order.objects.filter(payment_status='paid').aggregate(total=Sum('total_amount'))['total'] or 0
+    total_feedback = Feedback.objects.count()
+    pending_approval = User.objects.filter(is_active=False).count()
+    top_selling = (
+        OrderItem.objects.values('item_name')
+        .annotate(total_qty=Sum('quantity'))
+        .order_by('-total_qty')[:5]
+    )
+    return Response({
+        'total_users': total_users,
+        'total_students': total_students,
+        'total_faculty': total_faculty,
+        'total_stores': total_stores,
+        'total_orders': total_orders,
+        'total_revenue': total_revenue,
+        'total_feedback': total_feedback,
+        'pending_approval': pending_approval,
+        'top_selling': list(top_selling),
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_users(request):
+    if request.user.user_type != 'admin':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    users = User.objects.all().order_by('-date_joined')
+    serializer = UserSerializer(users, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def admin_delete_user(request, user_id):
+    if request.user.user_type != 'admin':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    user = get_object_or_404(User, user_id=user_id)
+    if user == request.user:
+        return Response({'error': 'Cannot delete yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+    user.delete()
+    return Response({'message': 'User deleted.'})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_all_orders(request):
+    if request.user.user_type != 'admin':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    orders = Order.objects.all().prefetch_related('items', 'status_history', 'user').order_by('-created_at')
+    serializer = OrderSerializer(orders, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_feedback(request):
+    if request.user.user_type != 'admin':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    feedback = Feedback.objects.all().select_related('user', 'order').order_by('-created_at')
+    serializer = FeedbackSerializer(feedback, many=True)
+    return Response(serializer.data)
+
+
 @ensure_csrf_cookie
 def landing_page(request):
     menu_items = MenuItem.objects.filter(is_available=True)[:8]
@@ -584,9 +675,18 @@ def store_register_page(request):
 
 @login_required
 def store_dashboard_page(request):
+    if request.user.user_type == 'admin':
+        return redirect('admin-dashboard-page')
     if request.user.user_type != 'store_owner':
         return render(request, 'store_register.html')
     return render(request, 'store_dashboard.html')
+
+
+@login_required
+def admin_dashboard_page(request):
+    if request.user.user_type != 'admin':
+        return redirect('/')
+    return render(request, 'admin_dashboard.html')
 
 
 @login_required

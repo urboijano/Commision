@@ -1,0 +1,425 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard - KaonISU{% endblock %}
+{% block content %}
+<style>
+  .navbar { display: none !important; }
+  body > .container, body .py-4 { max-width: none; padding: 0 !important; }
+  .admin-layout { display: flex; min-height: 100vh; }
+  .admin-sidebar {
+    width: 260px; flex-shrink: 0; background: #1a1a1a; padding: 1.5rem 1rem;
+    display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh;
+  }
+  .admin-sidebar-brand {
+    font-size: 1.3rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 0.4rem;
+    padding-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.25rem;
+  }
+  .admin-sidebar-brand svg { width: 20px; height: 20px; color: #ccff00; }
+  .admin-nav-item {
+    display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 0.85rem;
+    border-radius: 10px; color: rgba(255,255,255,0.6); font-size: 0.85rem; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; text-decoration: none; border: none; background: none; width: 100%; text-align: left;
+  }
+  .admin-nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+  .admin-nav-item.active { background: #ccff00; color: #1a1a1a; font-weight: 700; }
+  .admin-nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .admin-sidebar-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08); }
+  .admin-main { flex: 1; background: #f5f5f5; padding: 1.5rem 2rem; min-width: 0; }
+  .admin-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;
+  }
+  .admin-header h4 { font-size: 1.25rem; font-weight: 800; margin: 0; color: #1a1a1a; }
+  .admin-header-right { display: flex; align-items: center; gap: 0.75rem; }
+  .admin-avatar {
+    width: 38px; height: 38px; border-radius: 50%; background: #ccff00;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; color: #1a1a1a;
+  }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .stat-box {
+    background: #fff; border-radius: 14px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    display: flex; align-items: center; gap: 1rem; transition: transform 0.2s;
+  }
+  .stat-box:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+  .stat-box-icon {
+    width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center;
+    justify-content: center; font-size: 1.3rem; flex-shrink: 0;
+  }
+  .stat-box-body h6 { font-size: 0.72rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.1rem; }
+  .stat-box-body strong { font-size: 1.5rem; font-weight: 800; color: #1a1a1a; }
+  .card { background: #fff; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; margin-bottom: 1rem; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid #f0f0f0; }
+  .card-header h5 { font-size: 0.9rem; font-weight: 700; margin: 0; }
+  .card-body { padding: 1.25rem; }
+  .admin-table { width: 100%; font-size: 0.85rem; border-collapse: collapse; }
+  .admin-table th { text-align: left; padding: 0.6rem 0.75rem; font-weight: 600; color: #6b7280; border-bottom: 1px solid #f0f0f0; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .admin-table td { padding: 0.65rem 0.75rem; border-bottom: 1px solid #f0f0f0; }
+  .admin-table tr:last-child td { border-bottom: none; }
+  .admin-table tr:hover td { background: #fafafa; }
+  .user-avatar-sm { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+  .order-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .order-row {
+    display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem;
+    background: #fff; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); cursor: pointer; transition: all 0.15s;
+  }
+  .order-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .feedback-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .feedback-item { padding: 0.85rem 1rem; background: #fff; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
+  .menu-card-item { background: #fff; border-radius: 10px; padding: 0.85rem; box-shadow: 0 1px 2px rgba(0,0,0,0.04); display: flex; align-items: center; gap: 0.75rem; }
+  .dash-tab-content { display: none; }
+  .dash-tab-content.active { display: block; }
+  .badge-status { border-radius: 2rem; padding: 0.25rem 0.65rem; font-size: 0.7rem; font-weight: 600; display: inline-block; }
+  .breakdown-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem; }
+  .breakdown-item { background: #fff; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .breakdown-item strong { font-size: 1.3rem; font-weight: 800; display: block; }
+  .breakdown-item span { font-size: 0.78rem; color: #6b7280; }
+  .section-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.75rem; color: #1a1a1a; }
+</style>
+
+<div class="admin-layout">
+  <div class="admin-sidebar">
+    <div class="admin-sidebar-brand">
+      <i data-lucide="utensils-crossed"></i> KaonISU
+    </div>
+    <button class="admin-nav-item active" data-tab="overview">
+      <i data-lucide="layout-dashboard"></i> Overview
+    </button>
+    <button class="admin-nav-item" data-tab="users">
+      <i data-lucide="users"></i> Users
+    </button>
+    <button class="admin-nav-item" data-tab="menu">
+      <i data-lucide="utensils"></i> Menu
+    </button>
+    <button class="admin-nav-item" data-tab="feedback">
+      <i data-lucide="message-square"></i> Feedback
+    </button>
+    <div class="admin-sidebar-footer">
+      <button class="admin-nav-item" onclick="location.href='/'">
+        <i data-lucide="arrow-left"></i> Back to Site
+      </button>
+      <button class="admin-nav-item" id="logoutBtn">
+        <i data-lucide="log-out"></i> Sign Out
+      </button>
+    </div>
+  </div>
+
+  <div class="admin-main">
+    <div class="admin-header">
+      <div>
+        <h4 id="pageTitle">Overview</h4>
+        <p class="text-muted small mb-0" id="pageSubtitle">System summary and key metrics</p>
+      </div>
+      <div class="admin-header-right">
+        <span class="text-muted small">{{ user.full_name }}</span>
+        <div class="admin-avatar">{{ user.full_name|first }}</div>
+      </div>
+    </div>
+
+    <div id="tabOverview" class="dash-tab-content active">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+        <div style="background:#fff;border-radius:12px;padding:1rem 1.25rem;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+            <span style="font-size:0.75rem;color:#6b7280;font-weight:600;">Users</span>
+            <div style="width:28px;height:28px;border-radius:8px;background:#16a34a;display:flex;align-items:center;justify-content:center;"><i data-lucide="users" style="width:14px;height:14px;color:#fff;"></i></div>
+          </div>
+          <strong style="font-size:1.5rem;font-weight:800;" id="statTotalUsers">0</strong>
+          <div style="display:flex;gap:1rem;margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid #f0f0f0;">
+            <div><span style="font-size:0.65rem;color:#6b7280;">Students</span><br><strong style="font-size:0.85rem;" id="statStudents">0</strong></div>
+            <div><span style="font-size:0.65rem;color:#6b7280;">Faculty</span><br><strong style="font-size:0.85rem;" id="statFaculty">0</strong></div>
+            <div><span style="font-size:0.65rem;color:#6b7280;">Stores</span><br><strong style="font-size:0.85rem;" id="statStores">0</strong></div>
+          </div>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:1rem 1.25rem;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+            <span style="font-size:0.75rem;color:#6b7280;font-weight:600;">Revenue</span>
+            <div style="width:28px;height:28px;border-radius:8px;background:#ef4444;display:flex;align-items:center;justify-content:center;"><i data-lucide="trending-up" style="width:14px;height:14px;color:#fff;"></i></div>
+          </div>
+          <strong style="font-size:1.5rem;font-weight:800;" id="statRevenue">₱0.00</strong>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:1rem 1.25rem;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+            <span style="font-size:0.75rem;color:#6b7280;font-weight:600;">Feedback</span>
+            <div style="width:28px;height:28px;border-radius:8px;background:#3b82f6;display:flex;align-items:center;justify-content:center;"><i data-lucide="message-square" style="width:14px;height:14px;color:#fff;"></i></div>
+          </div>
+          <strong style="font-size:1.5rem;font-weight:800;" id="statFeedback">0</strong>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+        <div class="card" style="margin:0;">
+          <div class="card-header">
+            <h5>Pending Approval</h5>
+            <span id="pendingCount" class="badge" style="background:#f59e0b;color:#fff;">0</span>
+          </div>
+          <div class="card-body" style="padding:0.75rem;">
+            <div id="pendingList" style="display:flex;flex-direction:column;gap:0.35rem;"></div>
+          </div>
+        </div>
+        <div class="card" style="margin:0;">
+          <div class="card-header">
+            <h5>Most Selling</h5>
+          </div>
+          <div class="card-body" style="padding:0.75rem;">
+            <div id="topSellingList" style="display:flex;flex-direction:column;gap:0.35rem;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tabUsers" class="dash-tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h5>All Users</h5>
+          <span id="userCount" class="badge" style="background:#ccff00;color:#1a1a1a;">0</span>
+        </div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr><th>Name</th><th>Email</th><th>Type</th><th>ID</th><th>Joined</th><th></th></tr>
+            </thead>
+            <tbody id="usersList"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="tabMenu" class="dash-tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h5>Menu Items</h5>
+          <span id="adminMenuCount" class="badge" style="background:#ccff00;color:#1a1a1a;">0</span>
+        </div>
+        <div class="card-body">
+          <div class="menu-grid" id="adminMenuList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tabFeedback" class="dash-tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h5>All Feedback</h5>
+          <span id="feedbackCount" class="badge" style="background:#ccff00;color:#1a1a1a;">0</span>
+        </div>
+        <div class="card-body">
+          <div class="feedback-list" id="feedbackList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteUserModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="border-radius:16px;border:none;">
+      <div class="modal-body text-center" style="padding:2rem;">
+        <i data-lucide="alert-triangle" style="width:40px;height:40px;color:#ef4444;margin-bottom:1rem;"></i>
+        <h6 style="font-weight:700;">Delete this user?</h6>
+        <p class="text-muted small">This action cannot be undone.</p>
+        <input type="hidden" id="deleteUserId">
+        <div style="display:flex;gap:0.5rem;justify-content:center;">
+          <button class="btn btn-sm" style="background:#f3f4f6;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-sm" style="background:#ef4444;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" id="confirmDeleteUser">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+lucide.createIcons();
+
+let adminStats = {};
+let adminUsers = [];
+let adminMenu = [];
+let adminFeedback = [];
+
+function renderStats() {
+  document.getElementById('statTotalUsers').textContent = adminStats.total_users || 0;
+  document.getElementById('statRevenue').textContent = '₱' + parseFloat(adminStats.total_revenue || 0).toFixed(2);
+  document.getElementById('statFeedback').textContent = adminStats.total_feedback || 0;
+  document.getElementById('statStudents').textContent = adminStats.total_students || 0;
+  document.getElementById('statFaculty').textContent = adminStats.total_faculty || 0;
+  document.getElementById('statStores').textContent = adminStats.total_stores || 0;
+  document.getElementById('pendingCount').textContent = adminStats.pending_approval || 0;
+}
+
+function renderPending() {
+  const container = document.getElementById('pendingList');
+  const pending = adminUsers.filter(u => !u.is_active);
+  if (!pending.length) {
+    container.innerHTML = '<div class="text-muted small text-center py-3">No pending approvals.</div>';
+    return;
+  }
+  container.innerHTML = pending.map(u =>
+    '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.6rem;border-radius:8px;background:#f9fafb;">' +
+      '<div style="display:flex;align-items:center;gap:0.5rem;min-width:0;">' +
+        '<div class="user-avatar-sm" style="width:28px;height:28px;font-size:0.65rem;background:#fef3c7;color:#92400e;">' + (u.full_name ? u.full_name.charAt(0).toUpperCase() : '?') + '</div>' +
+        '<div style="min-width:0;"><strong style="font-size:0.8rem;">' + escapeHtml(u.full_name) + '</strong><span class="text-muted small d-block" style="font-size:0.7rem;">' + escapeHtml(u.email) + '</span></div>' +
+      '</div>' +
+      '<span class="badge-status" style="background:#f59e0b;color:#fff;font-size:0.6rem;">Pending</span>' +
+    '</div>'
+  ).join('');
+}
+
+function renderTopSelling() {
+  const container = document.getElementById('topSellingList');
+  const items = adminStats.top_selling || [];
+  if (!items.length) {
+    container.innerHTML = '<div class="text-muted small text-center py-3">No sales data yet.</div>';
+    return;
+  }
+  const max = items[0].total_qty || 1;
+  container.innerHTML = items.map((item, i) =>
+    '<div style="display:flex;align-items:center;gap:0.6rem;padding:0.4rem 0;">' +
+      '<span style="font-size:0.75rem;font-weight:700;color:#9ca3af;width:18px;">' + (i + 1) + '</span>' +
+      '<div style="flex:1;min-width:0;"><strong style="font-size:0.8rem;">' + escapeHtml(item.item_name) + '</strong><div style="height:6px;background:#f3f4f6;border-radius:3px;margin-top:0.2rem;overflow:hidden;"><div style="height:100%;width:' + Math.round(item.total_qty / max * 100) + '%;background:#ccff00;border-radius:3px;transition:width 0.3s;"></div></div></div>' +
+      '<span style="font-size:0.75rem;font-weight:700;color:#6b7280;">' + item.total_qty + '</span>' +
+    '</div>'
+  ).join('');
+}
+
+function renderUsers() {
+  const tbody = document.getElementById('usersList');
+  if (!adminUsers.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-muted small text-center py-4">No users found.</td></tr>';
+    document.getElementById('userCount').textContent = '0';
+    return;
+  }
+  const colors = ['#e8f5e9','#fff3e0','#fce4ec','#e3f2fd','#f3e5f5'];
+  tbody.innerHTML = adminUsers.map((u, i) => {
+    const initial = u.full_name ? u.full_name.charAt(0).toUpperCase() : '?';
+    const typeColor = u.user_type === 'admin' ? '#7c3aed' : u.user_type === 'store_owner' ? '#f97316' : u.user_type === 'faculty' ? '#3b82f6' : '#16a34a';
+    const typeLabel = u.user_type_display || u.user_type;
+    return '<tr>' +
+      '<td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="user-avatar-sm" style="background:' + colors[i % colors.length] + ';color:#1a1a1a;">' + initial + '</div><div><strong style="font-size:0.85rem;">' + escapeHtml(u.full_name) + '</strong>' + (u.store_name ? '<span class="text-muted small d-block">' + escapeHtml(u.store_name) + '</span>' : '') + '</div></div></td>' +
+      '<td class="text-muted">' + escapeHtml(u.email) + '</td>' +
+      '<td><span class="badge-status" style="background:' + typeColor + ';color:#fff;">' + typeLabel + '</span></td>' +
+      '<td class="text-muted">' + (u.student_faculty_id || '-') + '</td>' +
+      '<td class="text-muted" style="font-size:0.75rem;">' + (u.date_joined ? new Date(u.date_joined).toLocaleDateString() : '-') + '</td>' +
+      '<td>' + (u.user_type !== 'admin' ? '<button class="icon-btn" style="width:30px;height:30px;color:#ef4444;font-size:0.85rem;" onclick="confirmDeleteUser(\'' + u.user_id + '\')"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>' : '') + '</td>' +
+      '</tr>';
+  }).join('');
+  document.getElementById('userCount').textContent = adminUsers.length;
+  lucide.createIcons();
+}
+
+function renderMenu() {
+  const container = document.getElementById('adminMenuList');
+  if (!adminMenu.length) {
+    container.innerHTML = '<div class="text-muted small text-center py-4" style="grid-column:1/-1;">No menu items yet.</div>';
+    document.getElementById('adminMenuCount').textContent = '0';
+    return;
+  }
+  const icons = {rice:'wheat',noodles:'utensils-crossed',drinks:'cup-soda',snacks:'popcorn',desserts:'cake-slice'};
+  container.innerHTML = adminMenu.map(item => {
+    const icon = icons[item.category] || 'coffee';
+    return '<div class="menu-card-item"><div class="quick-card-icon" style="width:40px;height:40px;border-radius:10px;font-size:0.8rem;flex-shrink:0;"><i data-lucide="' + icon + '" style="width:18px;height:18px;"></i></div>' +
+      '<div style="flex:1;min-width:0;"><strong style="font-size:0.85rem;">' + escapeHtml(item.name) + '</strong><span class="text-muted small d-block">₱' + parseFloat(item.price).toFixed(2) + '</span></div>' +
+      '<div style="display:flex;gap:0.35rem;flex-shrink:0;">' +
+      (item.is_available ? '<span class="badge-status" style="background:#16a34a;color:#fff;">Available</span>' : '<span class="badge-status" style="background:#6b7280;color:#fff;">Unavailable</span>') +
+      '<span class="badge-status" style="background:#f3f4f6;color:#6b7280;">' + (item.category_display || item.category) + '</span></div></div>';
+  }).join('');
+  document.getElementById('adminMenuCount').textContent = adminMenu.length;
+  lucide.createIcons();
+}
+
+function renderFeedback() {
+  const container = document.getElementById('feedbackList');
+  if (!adminFeedback.length) {
+    container.innerHTML = '<div class="text-muted small text-center py-4">No feedback yet.</div>';
+    document.getElementById('feedbackCount').textContent = '0';
+    return;
+  }
+  const satColors = {very_satisfied:'#16a34a',satisfied:'#22c55e',neutral:'#f59e0b',dissatisfied:'#ef4444',very_dissatisfied:'#dc2626'};
+  container.innerHTML = adminFeedback.map(fb => {
+    const stars = '★'.repeat(fb.rating) + '☆'.repeat(5 - fb.rating);
+    const satColor = satColors[fb.satisfaction_level] || '#6b7280';
+    const satLabel = fb.satisfaction_display || fb.satisfaction_level;
+    return '<div class="feedback-item"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;flex-wrap:wrap;">' +
+      '<div><strong style="font-size:0.85rem;">' + (fb.user?.full_name || 'Unknown') + '</strong>' +
+      '<span style="color:#f59e0b;font-size:0.85rem;margin-left:0.5rem;">' + stars + '</span>' +
+      '<span class="text-muted small d-block">' + (fb.order?.order_number || '') + '</span>' +
+      (fb.comments ? '<p class="text-muted small mb-0" style="margin-top:0.25rem;font-style:italic;">"' + escapeHtml(fb.comments) + '"</p>' : '') + '</div>' +
+      '<span class="badge-status" style="background:' + satColor + ';color:#fff;">' + satLabel + '</span></div></div>';
+  }).join('');
+  document.getElementById('feedbackCount').textContent = adminFeedback.length;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function confirmDeleteUser(userId) {
+  document.getElementById('deleteUserId').value = userId;
+  new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
+}
+
+async function loadStats() {
+  const data = await apiGet('/api/kaon-admin/stats/');
+  if (data) adminStats = data;
+  renderStats();
+  renderTopSelling();
+}
+
+async function loadUsers() {
+  const data = await apiGet('/api/kaon-admin/users/');
+  if (data) adminUsers = data;
+  renderUsers();
+  renderPending();
+}
+
+async function loadMenu() {
+  const data = await apiGet('/api/store/menu/');
+  if (data) adminMenu = data;
+  renderMenu();
+}
+
+async function loadFeedback() {
+  const data = await apiGet('/api/kaon-admin/feedback/');
+  if (data) adminFeedback = data;
+  renderFeedback();
+}
+
+const pageTitles = {
+  overview: ['Overview', 'System summary and key metrics'],
+  users: ['Users', 'Manage all registered users'],
+  menu: ['Menu', 'View all menu items'],
+  feedback: ['Feedback', 'Review customer feedback'],
+};
+
+document.addEventListener('DOMContentLoaded', function () {
+  loadStats();
+  loadUsers();
+  loadMenu();
+  loadFeedback();
+
+  document.querySelectorAll('.admin-nav-item[data-tab]').forEach(item => {
+    item.addEventListener('click', function () {
+      document.querySelectorAll('.admin-nav-item[data-tab]').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.dash-tab-content').forEach(c => c.classList.remove('active'));
+      this.classList.add('active');
+      const tab = this.dataset.tab;
+      document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+      const title = pageTitles[tab] || ['Dashboard', ''];
+      document.getElementById('pageTitle').textContent = title[0];
+      document.getElementById('pageSubtitle').textContent = title[1];
+    });
+  });
+
+  document.getElementById('confirmDeleteUser')?.addEventListener('click', async function () {
+    const userId = document.getElementById('deleteUserId').value;
+    const result = await apiDelete('/api/kaon-admin/users/' + userId + '/delete/');
+    if (result) {
+      bootstrap.Modal.getInstance(document.getElementById('deleteUserModal')).hide();
+      await loadUsers();
+      await loadStats();
+    }
+  });
+});
+</script>
+{% endblock %}
