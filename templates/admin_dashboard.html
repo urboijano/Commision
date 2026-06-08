@@ -63,8 +63,7 @@
   .order-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
   .feedback-list { display: flex; flex-direction: column; gap: 0.5rem; }
   .feedback-item { padding: 0.85rem 1rem; background: #fff; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
-  .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
-  .menu-card-item { background: #fff; border-radius: 10px; padding: 0.85rem; box-shadow: 0 1px 2px rgba(0,0,0,0.04); display: flex; align-items: center; gap: 0.75rem; }
+
   .dash-tab-content { display: none; }
   .dash-tab-content.active { display: block; }
   .badge-status { border-radius: 2rem; padding: 0.25rem 0.65rem; font-size: 0.7rem; font-weight: 600; display: inline-block; }
@@ -92,11 +91,14 @@
     <button class="admin-nav-item" data-tab="feedback">
       <i data-lucide="message-square"></i> Feedback
     </button>
+    <a href="/menu/" class="admin-nav-item" style="text-decoration:none;">
+      <i data-lucide="shopping-cart"></i> Order Here
+    </a>
     <div class="admin-sidebar-footer">
       <button class="admin-nav-item" onclick="location.href='/'">
         <i data-lucide="arrow-left"></i> Back to Site
       </button>
-      <button class="admin-nav-item" id="logoutBtn">
+      <button class="admin-nav-item" onclick="handleLogout()">
         <i data-lucide="log-out"></i> Sign Out
       </button>
     </div>
@@ -188,8 +190,13 @@
           <h5>Menu Items</h5>
           <span id="adminMenuCount" class="badge" style="background:#ccff00;color:#1a1a1a;">0</span>
         </div>
-        <div class="card-body">
-          <div class="menu-grid" id="adminMenuList"></div>
+        <div class="card-body" style="padding:0;overflow-x:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr><th>Item</th><th>Price</th><th>Category</th><th>Status</th></tr>
+            </thead>
+            <tbody id="adminMenuList"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -306,23 +313,24 @@ function renderUsers() {
 }
 
 function renderMenu() {
-  const container = document.getElementById('adminMenuList');
+  const tbody = document.getElementById('adminMenuList');
   if (!adminMenu.length) {
-    container.innerHTML = '<div class="text-muted small text-center py-4" style="grid-column:1/-1;">No menu items yet.</div>';
+    tbody.innerHTML = '<tr><td colspan="4" class="text-muted small text-center py-4">No menu items yet.</td></tr>';
     document.getElementById('adminMenuCount').textContent = '0';
     return;
   }
-  const icons = {rice:'wheat',noodles:'utensils-crossed',drinks:'cup-soda',snacks:'popcorn',desserts:'cake-slice'};
-  container.innerHTML = adminMenu.map(item => {
-    const icon = icons[item.category] || 'coffee';
-    return '<div class="menu-card-item"><div class="quick-card-icon" style="width:40px;height:40px;border-radius:10px;font-size:0.8rem;flex-shrink:0;"><i data-lucide="' + icon + '" style="width:18px;height:18px;"></i></div>' +
-      '<div style="flex:1;min-width:0;"><strong style="font-size:0.85rem;">' + escapeHtml(item.name) + '</strong><span class="text-muted small d-block">₱' + parseFloat(item.price).toFixed(2) + '</span></div>' +
-      '<div style="display:flex;gap:0.35rem;flex-shrink:0;">' +
-      (item.is_available ? '<span class="badge-status" style="background:#16a34a;color:#fff;">Available</span>' : '<span class="badge-status" style="background:#6b7280;color:#fff;">Unavailable</span>') +
-      '<span class="badge-status" style="background:#f3f4f6;color:#6b7280;">' + (item.category_display || item.category) + '</span></div></div>';
-  }).join('');
+  tbody.innerHTML = adminMenu.map(item =>
+    '<tr>' +
+      '<td><div style="display:flex;align-items:center;gap:0.5rem;">' +
+        (item.image_url ? '<img src="' + item.image_url + '" alt="" style="width:32px;height:32px;border-radius:8px;object-fit:cover;flex-shrink:0;">' : '<div style="width:32px;height:32px;border-radius:8px;background:#f3f4f6;flex-shrink:0;"></div>') +
+        '<strong style="font-size:0.85rem;">' + escapeHtml(item.name) + '</strong>' +
+      '</div></td>' +
+      '<td class="text-muted">₱' + parseFloat(item.price).toFixed(2) + '</td>' +
+      '<td><span class="badge-status" style="background:#f3f4f6;color:#6b7280;">' + (item.category_display || item.category) + '</span></td>' +
+      '<td>' + (item.is_available ? '<span class="badge-status" style="background:#16a34a;color:#fff;">Available</span>' : '<span class="badge-status" style="background:#6b7280;color:#fff;">Unavailable</span>') + '</td>' +
+    '</tr>'
+  ).join('');
   document.getElementById('adminMenuCount').textContent = adminMenu.length;
-  lucide.createIcons();
 }
 
 function renderFeedback() {
@@ -354,6 +362,12 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+async function handleLogout() {
+  await apiPost('/api/auth/logout/', {});
+  clearTokens();
+  window.location.href = '/';
+}
+
 function confirmDeleteUser(userId) {
   document.getElementById('deleteUserId').value = userId;
   new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
@@ -374,7 +388,7 @@ async function loadUsers() {
 }
 
 async function loadMenu() {
-  const data = await apiGet('/api/store/menu/');
+  const data = await apiGet('/api/kaon-admin/menu/');
   if (data) adminMenu = data;
   renderMenu();
 }

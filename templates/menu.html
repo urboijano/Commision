@@ -1,134 +1,277 @@
 {% extends 'base.html' %}
-{% block title %}Menu - Food Ordering{% endblock %}
+{% block title %}Menu - KaonISU{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0"><i class="bi bi-menu-app"></i> Browse Menu</h3>
-    <button class="btn btn-outline-primary position-relative" id="viewCartBtn" onclick="location.href='/cart/'">
-        <i class="bi bi-cart"></i> Cart
-        <span class="badge bg-danger rounded-pill" id="cartCountBadge">0</span>
-    </button>
-</div>
+<style>
+  .navbar { display: none !important; }
+  body > .container, body .py-4 { max-width: none; padding: 0 !important; }
+</style>
+<div class="landing-bg">
+  <div class="landing-grid">
+    <div class="landing-main">
+      <div class="main-container">
 
-<div class="mb-4" id="categoryFilters">
-    <span class="category-chip active" data-category="">All</span>
-    <span class="category-chip" data-category="rice">Rice Meals</span>
-    <span class="category-chip" data-category="noodles">Noodles</span>
-    <span class="category-chip" data-category="drinks">Drinks</span>
-    <span class="category-chip" data-category="snacks">Snacks</span>
-    <span class="category-chip" data-category="desserts">Desserts</span>
-</div>
+        <div class="main-header">
+          <div class="brand-mark">KaonISU <i data-lucide="utensils-crossed" class="brand-icon"></i></div>
+          <div class="welcome-actions">
+            <div class="search-wrapper">
+              <i data-lucide="search" class="search-icon"></i>
+              <input type="text" class="search-input" id="searchInput" placeholder="Search for meals...">
+            </div>
+            <div style="position:relative;">
+              <button class="icon-btn" id="profileBtn" title="Profile" style="border:none;background:none;cursor:pointer;">
+                <i data-lucide="user"></i>
+              </button>
+              <div id="profileDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);padding:1rem;min-width:220px;z-index:1100;">
+                <div style="font-size:0.85rem;font-weight:700;color:#1a1a1a;margin-bottom:0.25rem;">{{ user.full_name }}</div>
+                {% if user.student_faculty_id %}
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.15rem;">ID: {{ user.student_faculty_id }}</div>
+                {% endif %}
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.75rem;word-break:break-all;"><strong style="color:#374151;">Email:</strong> {{ user.email }}</div>
+                {% if user.user_type == 'admin' or user.user_type == 'store_owner' %}
+                <a href="{% if user.user_type == 'admin' %}/kaon-admin/{% else %}/dashboard/{% endif %}" style="display:block;padding:0.5rem;border-radius:8px;background:#f3f4f6;color:#1a1a1a;font-size:0.8rem;font-weight:600;text-decoration:none;text-align:center;transition:background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">Dashboard</a>
+                {% else %}
+                <button onclick="handleLogout()" style="display:block;width:100%;padding:0.5rem;border:none;border-radius:8px;background:#fee2e2;color:#dc2626;font-size:0.8rem;font-weight:600;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">Logout</button>
+                {% endif %}
+              </div>
+            </div>
+            <a href="/cart/" class="cart-btn" id="cartBtn">
+              <i data-lucide="shopping-cart"></i>
+              <span class="cart-count-dot" id="cartCountBadge">0</span>
+            </a>
+          </div>
+        </div>
 
-<div class="row g-3" id="menuGrid">
-    <div class="col-12 text-center py-5">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2">Loading menu...</p>
+        <div class="main-body">
+          <div class="categories-row" id="categoryFilters">
+            <a class="category-pill active" data-category="" href="#">All</a>
+            <a class="category-pill" data-category="rice" href="#"><i data-lucide="wheat" class="cat-icon"></i> Rice Meals</a>
+            <a class="category-pill" data-category="noodles" href="#"><i data-lucide="utensils-crossed" class="cat-icon"></i> Noodles</a>
+            <a class="category-pill" data-category="drinks" href="#"><i data-lucide="cup-soda" class="cat-icon"></i> Drinks</a>
+            <a class="category-pill" data-category="snacks" href="#"><i data-lucide="popcorn" class="cat-icon"></i> Snacks</a>
+            <a class="category-pill" data-category="desserts" href="#"><i data-lucide="cake-slice" class="cat-icon"></i> Desserts</a>
+          </div>
+
+          <div id="menuGrid" class="recommended-row" style="flex-wrap: wrap; gap: 1rem; overflow: visible;">
+            <div style="width:100%;text-align:center;padding:2rem;">
+              <div class="spinner-border" style="width:2rem;height:2rem;color:#1a1a1a;" role="status"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
+
+    <div class="landing-sidebar">
+      <div class="sidebar-card" style="display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;gap:0.5rem;font-weight:700;font-size:0.9rem;margin-bottom:0.75rem;">
+          <i data-lucide="shopping-cart" style="width:18px;height:18px;color:#ccff00;"></i>
+          <span>Your Cart</span>
+        </div>
+        <div id="sidebarCartItems">
+          <p class="text-muted small" style="margin-bottom:0;">No items yet.</p>
+        </div>
+        <div style="margin-top:auto;padding-top:0.75rem;border-top:1px solid #f3f4f6;">
+          <div style="display:flex;justify-content:space-between;font-size:0.85rem;font-weight:700;margin-bottom:0.75rem;">
+            <span>Total</span>
+            <span id="sidebarCartTotal">₱0.00</span>
+          </div>
+          <a href="/cart/" class="order-btn" style="text-decoration:none;font-size:0.9rem;padding:0.65rem;">
+            View Cart <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+          </a>
+        </div>
+      </div>
+
+      <div class="sidebar-card promo-sidebar" style="flex:0;">
+        <div class="promo-sidebar-badge">Special Offer</div>
+        <h5>Student Meal Deals</h5>
+        <p>Get fresh, affordable meals every day at the canteen.</p>
+        <a href="/menu/" class="promo-sidebar-btn" onclick="document.querySelector('[data-category=rice]')?.click();return false;">View meals</a>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1060;">
-    <div id="cartToast" class="toast" role="alert">
-        <div class="toast-body d-flex align-items-center">
-            <i class="bi bi-check-circle-fill text-success me-2"></i>
-            <span id="cartToastMsg">Item added to cart!</span>
-            <button type="button" class="btn-close ms-2" data-bs-dismiss="toast"></button>
-        </div>
+  <div id="cartToast" class="toast" role="alert" style="border-radius:12px;">
+    <div class="toast-body d-flex align-items-center">
+      <i data-lucide="check-circle" style="width:18px;height:18px;color:#22c55e;margin-right:0.5rem;"></i>
+      <span id="cartToastMsg" style="font-size:0.85rem;">Item added to cart!</span>
+      <button type="button" class="btn-close ms-2" data-bs-dismiss="toast" style="font-size:0.75rem;"></button>
     </div>
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
 let currentCategory = '';
 let cartData = { items: [], total_items: 0, total_price: 0 };
+let searchTerm = '';
 
-document.querySelectorAll('.category-chip').forEach(chip => {
-    chip.addEventListener('click', function() {
-        document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
-        this.classList.add('active');
-        currentCategory = this.dataset.category;
-        loadMenu();
-    });
+const catPills = document.querySelectorAll('.category-pill');
+catPills.forEach(pill => {
+  pill.addEventListener('click', function(e) {
+    e.preventDefault();
+    catPills.forEach(p => p.classList.remove('active'));
+    this.classList.add('active');
+    currentCategory = this.dataset.category;
+    loadMenu();
+  });
+});
+
+document.getElementById('searchInput')?.addEventListener('input', function() {
+  searchTerm = this.value.toLowerCase();
+  loadMenu();
 });
 
 async function loadMenu() {
-    const grid = document.getElementById('menuGrid');
-    grid.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>';
+  const grid = document.getElementById('menuGrid');
+  grid.innerHTML = '<div style="width:100%;text-align:center;padding:2rem;"><div class="spinner-border" style="width:2rem;height:2rem;color:#1a1a1a;" role="status"></div></div>';
 
-    let url = '/api/menu/';
-    if (currentCategory) url += `?category=${currentCategory}`;
+  let url = '/api/menu/';
+  if (currentCategory) url += `?category=${currentCategory}`;
 
-    const items = await apiGet(url);
-    if (!items) return;
+  const items = await apiGet(url);
+  if (!items) return;
 
-    if (items.length === 0) {
-        grid.innerHTML = '<div class="col-12 text-center py-5"><p class="text-muted">No items in this category.</p></div>';
-        return;
-    }
+  let filtered = items;
+  if (searchTerm) {
+    filtered = items.filter(item =>
+      item.name.toLowerCase().includes(searchTerm) ||
+      (item.description && item.description.toLowerCase().includes(searchTerm))
+    );
+  }
 
-    grid.innerHTML = items.map(item => `
-        <div class="col-6 col-md-4 col-lg-3">
-            <div class="card menu-card h-100 shadow-sm">
-                <div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height:140px;">
-                    <i class="bi bi-egg-fried" style="font-size:3rem;color:#adb5bd;"></i>
-                </div>
-                <div class="card-body">
-                    <h6 class="card-title mb-1">${item.name}</h6>
-                    <p class="price-tag mb-2">₱${parseFloat(item.price).toFixed(2)}</p>
-                    <button class="btn btn-primary btn-sm w-100 add-to-cart-btn"
-                            data-item-id="${item.item_id}"
-                            data-item-name="${item.name}">
-                        <i class="bi bi-plus-circle"></i> Add to Cart
-                    </button>
-                </div>
-            </div>
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div style="width:100%;text-align:center;padding:2rem;"><p class="text-muted" style="font-size:0.9rem;">No items found.</p></div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(item => `
+    <div class="rec-card" style="flex:0 0 180px;cursor:default;">
+      <div class="rec-card-img" style="background:${getItemBg(item.name)};${item.image_url ? 'padding:0;' : ''}">
+        ${item.image_url ? `<img src="${item.image_url}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;">` : `<i data-lucide="${getItemIcon(item.category)}"></i>`}
+      </div>
+      <div class="rec-card-body">
+        <h6>${item.name}</h6>
+        <p class="text-muted small">${item.description || ''}</p>
+        <div class="rec-card-footer">
+          <span class="rec-price">₱${parseFloat(item.price).toFixed(2)}</span>
+          <button class="add-btn add-to-cart-btn" data-item-id="${item.item_id}" data-item-name="${item.name}">
+            <i data-lucide="plus"></i>
+          </button>
         </div>
-    `).join('');
+      </div>
+    </div>
+  `).join('');
 
-    document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const itemId = parseInt(this.dataset.itemId);
-            addToCart(itemId, this);
-        });
+  lucide.createIcons();
+
+  document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const itemId = parseInt(this.dataset.itemId);
+      addToCart(itemId, this);
     });
+  });
+}
+
+function getItemBg(name) {
+  const colors = ['#e8f5e9', '#fff3e0', '#fce4ec', '#e3f2fd', '#f3e5f5', '#e0f7fa', '#fff8e1', '#fbe9e7'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function getItemIcon(category) {
+  const map = { rice: 'wheat', noodles: 'utensils-crossed', drinks: 'cup-soda', snacks: 'popcorn', desserts: 'cake-slice' };
+  return map[category] || 'coffee';
 }
 
 async function addToCart(itemId, btn) {
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:12px;height:12px;"></span>';
 
-    const result = await apiPost('/api/cart/add/', { item_id: itemId, quantity: 1 });
+  const result = await apiPost('/api/cart/add/', { item_id: itemId, quantity: 1 });
 
-    btn.disabled = false;
-    btn.innerHTML = originalText;
+  btn.disabled = false;
+  btn.innerHTML = '<i data-lucide="plus"></i>';
+  lucide.createIcons();
 
-    if (result) {
-        cartData = result;
-        updateCartBadge();
-        showCartToast(`${btn.dataset.itemName} added to cart!`);
-    }
+  if (result) {
+    cartData = result;
+    updateCartBadge();
+    updateSidebarCart();
+    showCartToast(`Added to cart!`);
+  }
 }
 
 async function loadCart() {
-    const data = await apiGet('/api/cart/');
-    if (data) {
-        cartData = data;
-        updateCartBadge();
-    }
+  const data = await apiGet('/api/cart/');
+  if (data) {
+    cartData = data;
+    updateCartBadge();
+    updateSidebarCart();
+  }
 }
 
 function updateCartBadge() {
-    const badge = document.getElementById('cartCountBadge');
-    if (badge) {
-        badge.textContent = cartData.total_items || 0;
-        badge.style.display = (cartData.total_items || 0) > 0 ? '' : 'none';
-    }
+  const badge = document.getElementById('cartCountBadge');
+  if (badge) {
+    const count = cartData.total_items || 0;
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'flex' : 'none';
+  }
+}
+
+function updateSidebarCart() {
+  const container = document.getElementById('sidebarCartItems');
+  const totalEl = document.getElementById('sidebarCartTotal');
+  if (!container) return;
+
+  if (!cartData.items || cartData.items.length === 0) {
+    container.innerHTML = '<p class="text-muted small" style="margin-bottom:0;">No items yet.</p>';
+    totalEl.textContent = '₱0.00';
+    return;
+  }
+
+  container.innerHTML = cartData.items.slice(0, 4).map(item => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0;font-size:0.8rem;border-bottom:1px solid #f9fafb;">
+      <span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">${item.item_name}</span>
+      <span style="font-weight:700;">₱${parseFloat(item.subtotal).toFixed(2)}</span>
+    </div>
+  `).join('');
+
+  if (cartData.items.length > 4) {
+    container.innerHTML += `<div style="font-size:0.75rem;color:#9ca3af;padding-top:0.25rem;text-align:center;">+${cartData.items.length - 4} more items</div>`;
+  }
+
+  totalEl.textContent = `₱${parseFloat(cartData.total_price).toFixed(2)}`;
 }
 
 function showCartToast(msg) {
-    document.getElementById('cartToastMsg').textContent = msg;
-    const toast = new bootstrap.Toast(document.getElementById('cartToast'), { delay: 2000 });
-    toast.show();
+  document.getElementById('cartToastMsg').textContent = msg;
+  lucide.createIcons();
+  const toast = new bootstrap.Toast(document.getElementById('cartToast'), { delay: 2000 });
+  toast.show();
 }
+
+async function handleLogout() {
+  await apiPost('/api/auth/logout/', {});
+  clearTokens();
+  window.location.href = '/';
+}
+
+document.getElementById('profileBtn')?.addEventListener('click', function(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('profileDropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+});
+document.addEventListener('click', function() {
+  const dd = document.getElementById('profileDropdown');
+  if (dd) dd.style.display = 'none';
+});
+document.getElementById('profileDropdown')?.addEventListener('click', function(e) {
+  e.stopPropagation();
+});
 
 loadMenu();
 loadCart();

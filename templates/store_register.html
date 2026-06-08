@@ -70,6 +70,13 @@
           </div>
         </div>
 
+        <div class="auth-field" style="margin-top: 0.5rem;">
+          <label style="display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer;font-size:0.8rem;color:#374151;line-height:1.4;">
+            <input type="checkbox" id="agreeTos" required style="margin-top:0.15rem;width:16px;height:16px;accent-color:#1a1a1a;flex-shrink:0;">
+            <span>I have read, understood, and agree to the <a href="#" onclick="event.preventDefault();showTosModal();" style="color:#1a1a1a;font-weight:700;text-decoration:underline;">Terms of Service</a> and <a href="#" onclick="event.preventDefault();showTosModal();" style="color:#1a1a1a;font-weight:700;text-decoration:underline;">Privacy Policy</a> of this Food Ordering System</span>
+          </label>
+        </div>
+
         <button type="submit" class="order-btn" id="registerBtn" style="border-radius: 12px; padding: 0.85rem; font-size: 1rem; margin-top: 0.5rem;">
           <span id="registerSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
           Create Store Account
@@ -81,6 +88,47 @@
           Already have an account? Sign in
         </a>
       </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="tosModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg">
+    <div class="modal-content" style="border-radius:16px;border:none;">
+      <style>.modal-body::-webkit-scrollbar { display: none; } .modal-body { -ms-overflow-style: none; scrollbar-width: none; }</style>
+      <div class="modal-header" style="border-bottom:1px solid #f0f0f0;padding:1.25rem 1.5rem;">
+        <h5 style="font-weight:800;margin:0;font-size:1.1rem;">Terms of Service & Privacy Policy</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="padding:1.5rem;font-size:0.85rem;line-height:1.6;color:#374151;overflow-y:scroll;">
+        <h6 style="font-weight:800;font-size:0.95rem;margin-bottom:0.25rem;">Terms of Service</h6>
+        <p style="color:#6b7280;font-size:0.75rem;margin-bottom:0.75rem;">Effective Date: June 2026</p>
+        <p>Welcome to KaonISU. By accessing and using this system, you agree to comply with and be bound by the following Terms of Service.</p>
+        <p><strong>1. Acceptance of Terms</strong><br>By creating an account and using the system, you agree to these Terms of Service. If you do not agree with any part of these terms, please do not use the system.</p>
+        <p><strong>2. User Accounts</strong><br>• Users must provide accurate and complete information during registration.<br>• Users are responsible for maintaining the confidentiality of their account credentials.<br>• Sharing accounts with others is prohibited.<br>• The system administrator reserves the right to suspend or terminate accounts that violate these terms.</p>
+        <p><strong>3. Food Ordering</strong><br>• Orders submitted through the system are considered valid and binding.<br>• Users are responsible for reviewing their orders before submission.<br>• The canteen reserves the right to reject or cancel orders due to unavailability of items or operational issues.</p>
+        <p><strong>4. Prohibited Activities</strong><br>Users shall not:<br>• Submit false or misleading information.<br>• Attempt unauthorized access to the system.<br>• Interfere with the operation or security of the system.<br>• Use the system for fraudulent or unlawful activities.</p>
+        <p><strong>5. System Availability</strong><br>While efforts are made to ensure continuous service, the system may experience interruptions due to maintenance, technical issues, or unforeseen circumstances.</p>
+        <p><strong>6. Limitation of Liability</strong><br>The developers, administrators, and canteen management shall not be liable for any loss, damage, or inconvenience arising from the use or temporary unavailability of the system.</p>
+        <p><strong>7. Changes to Terms</strong><br>The system administrator reserves the right to modify these Terms of Service at any time. Continued use of the system constitutes acceptance of the updated terms.</p>
+        <p><strong>8. Contact Information</strong><br>For questions regarding these Terms of Service, users may contact the system administrator.</p>
+        <hr style="margin:1.5rem 0;border-color:#f0f0f0;">
+        <h6 style="font-weight:800;font-size:0.95rem;margin-bottom:0.25rem;">Privacy Policy</h6>
+        <p style="color:#6b7280;font-size:0.75rem;margin-bottom:0.75rem;">Effective Date: June 2026</p>
+        <p>At KaonISU, we value and respect your privacy. This Privacy Policy explains how we collect, use, and protect your information.</p>
+        <p><strong>1. Information We Collect</strong><br>The system may collect the following information:<br>• Full Name<br>• Student ID Number / Faculty ID<br>• Email Address<br>• Account Credentials<br>• Order History and Transaction Records</p>
+        <p><strong>2. Purpose of Data Collection</strong><br>Collected information is used to:<br>• Create and manage user accounts.<br>• Process and manage food orders.<br>• Provide notifications and order updates.<br>• Improve system functionality and user experience.<br>• Maintain security and prevent unauthorized access.</p>
+        <p><strong>3. Data Protection</strong><br>The system implements appropriate security measures to protect user information from unauthorized access, disclosure, alteration, or destruction.</p>
+        <p><strong>4. Data Sharing</strong><br>User information will not be sold, rented, or shared with third parties except:<br>• When required by law.<br>• When necessary for the operation of the system and order fulfillment.</p>
+        <p><strong>5. Data Retention</strong><br>User information and transaction records will be retained only for as long as necessary to fulfill operational, legal, and administrative purposes.</p>
+        <p><strong>6. User Rights</strong><br>Users have the right to:<br>• Access their personal information.<br>• Request correction of inaccurate information.<br>• Request deletion of their account, subject to applicable policies and record-keeping requirements.</p>
+        <p><strong>7. Cookies and System Logs</strong><br>The system may use session cookies and activity logs to improve functionality, enhance security, and monitor system performance.</p>
+        <p><strong>8. Changes to This Privacy Policy</strong><br>The Privacy Policy may be updated from time to time. Any changes will be posted within the system.</p>
+        <p><strong>9. Contact Information</strong><br>For concerns regarding privacy and data protection, users may contact the system administrator.</p>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid #f0f0f0;padding:1rem 1.5rem;">
+        <button class="order-btn" style="font-size:0.85rem;padding:0.6rem 1.5rem;width:auto;" data-bs-dismiss="modal">Close</button>
+      </div>
     </div>
   </div>
 </div>
@@ -97,6 +145,10 @@ function checkPasswordCriteria(pw) {
         digit: /\d/.test(pw),
         special: /[^A-Za-z0-9]/.test(pw),
     };
+}
+
+function showTosModal() {
+    new bootstrap.Modal(document.getElementById('tosModal')).show();
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -136,6 +188,12 @@ document.addEventListener('DOMContentLoaded', function () {
         e.preventDefault();
         const btn = document.getElementById('registerBtn');
         const spinner = document.getElementById('registerSpinner');
+
+        if (!document.getElementById('agreeTos').checked) {
+            showAlert('You must agree to the Terms of Service and Privacy Policy to create an account.', 'danger');
+            return;
+        }
+
         btn.disabled = true;
         spinner.classList.remove('d-none');
 

@@ -1,10 +1,12 @@
 import json
 import random
 from decimal import Decimal
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
-from django.contrib.auth import authenticate, login as django_login
+from django.contrib.auth import authenticate, login as django_login, logout as django_logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
@@ -47,6 +49,12 @@ def register(request):
     if User.objects.filter(email=data['email']).exists():
         return Response(
             {'error': 'An account with this email already exists.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if User.objects.filter(student_faculty_id=data['student_faculty_id']).exists():
+        return Response(
+            {'error': 'This student/faculty ID is already registered.'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -123,7 +131,35 @@ def forgot_password(request):
     code = f"{random.randint(100000, 999999)}"
     PasswordResetCode.objects.create(user=user, code=code)
 
-    return Response({'message': 'Reset code sent.', 'code': code})
+    html_content = f'''
+    <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04);font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+      <div style="background:#1a1a1a;padding:1.5rem;text-align:center;">
+        <span style="font-size:1.4rem;font-weight:800;color:#ccff00;">KaonISU</span>
+      </div>
+      <div style="padding:1.5rem;">
+        <h2 style="font-size:1.1rem;font-weight:700;color:#1a1a1a;margin:0 0 0.5rem;">Password Reset Code</h2>
+        <p style="font-size:0.85rem;color:#6b7280;margin:0 0 1rem;">Use the code below to reset your password. This code is valid for a limited time.</p>
+        <div style="background:#f3f4f6;border-radius:12px;padding:1rem;text-align:center;margin-bottom:1rem;">
+          <span style="font-size:2rem;font-weight:800;letter-spacing:0.3em;color:#1a1a1a;">{code}</span>
+        </div>
+        <p style="font-size:0.8rem;color:#9ca3af;margin:0;">If you did not request a password reset, please ignore this email. Do not share this code with anyone.</p>
+      </div>
+      <div style="background:#f9fafb;padding:1rem;text-align:center;border-top:1px solid #f0f0f0;">
+        <span style="font-size:0.75rem;color:#9ca3af;">&copy; 2026 KaonISU. All rights reserved.</span>
+      </div>
+    </div>
+    '''
+    text_content = f'Your password reset code is: {code}\n\nThis code is valid for a limited time. Do not share this with anyone.'
+    msg = EmailMultiAlternatives(
+        'Your Password Reset Code - KaonISU',
+        text_content,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+    )
+    msg.attach_alternative(html_content, 'text/html')
+    msg.send(fail_silently=False)
+
+    return Response({'message': 'Reset code sent.'})
 
 
 @api_view(['POST'])
@@ -179,6 +215,12 @@ def login(request):
         'tokens': tokens,
     })
 
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def logout(request):
+    django_logout(request)
+    return Response({'message': 'Logged out successfully.'})
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -638,6 +680,16 @@ def admin_feedback(request):
     return Response(serializer.data)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_all_menu_items(request):
+    if request.user.user_type != 'admin':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    items = MenuItem.objects.all().order_by('name')
+    serializer = MenuItemSerializer(items, many=True)
+    return Response(serializer.data)
+
+
 @ensure_csrf_cookie
 def landing_page(request):
     menu_items = MenuItem.objects.filter(is_available=True)[:8]
@@ -672,6 +724,11 @@ def reset_password_page(request):
 def store_register_page(request):
     return render(request, 'store_register.html')
 
+
+@login_required
+def logout_page(request):
+    django_logout(request)
+    return redirect('/')
 
 @login_required
 def store_dashboard_page(request):

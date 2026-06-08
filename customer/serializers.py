@@ -104,9 +104,14 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class MenuItemSerializer(serializers.ModelSerializer):
+    category_display = serializers.SerializerMethodField()
+
     class Meta:
         model = MenuItem
-        fields = ['item_id', 'name', 'description', 'price', 'category', 'image_url', 'is_available']
+        fields = ['item_id', 'name', 'description', 'price', 'category', 'category_display', 'image_url', 'is_available']
+
+    def get_category_display(self, obj):
+        return obj.get_category_display()
 
 
 class CartItemSerializer(serializers.ModelSerializer):

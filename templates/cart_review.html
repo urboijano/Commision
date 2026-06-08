@@ -1,162 +1,311 @@
 {% extends 'base.html' %}
-{% block title %}Review Cart - Food Ordering{% endblock %}
+{% block title %}Cart - KaonISU{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0"><i class="bi bi-cart-check"></i> Your Cart</h3>
-    <a href="/menu/" class="btn btn-outline-primary">
-        <i class="bi bi-plus-circle"></i> Add More Items
-    </a>
-</div>
+<style>
+  .navbar { display: none !important; }
+  body > .container, body .py-4 { max-width: none; padding: 0 !important; }
+</style>
+<div class="landing-bg">
+  <div class="landing-grid">
+    <div class="landing-main">
+      <div class="main-container">
 
-<div id="cartContent">
-    <div class="text-center py-5">
-        <div class="spinner-border text-primary" role="status"></div>
-    </div>
-</div>
-
-<div id="cartBottom" class="d-none">
-    <div class="card shadow-sm border-0 mt-3">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">Total:</h5>
-                <h4 class="mb-0 fw-bold text-success" id="cartTotal">₱0.00</h4>
+        <div class="main-header">
+          <div class="brand-mark">KaonISU <i data-lucide="utensils-crossed" class="brand-icon"></i></div>
+          <div class="welcome-actions">
+            <div style="position:relative;">
+              <button class="icon-btn" id="profileBtn" title="Profile" style="border:none;background:none;cursor:pointer;">
+                <i data-lucide="user"></i>
+              </button>
+              <div id="profileDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);padding:1rem;min-width:220px;z-index:1100;">
+                <div style="font-size:0.85rem;font-weight:700;color:#1a1a1a;margin-bottom:0.25rem;">{{ user.full_name }}</div>
+                {% if user.student_faculty_id %}
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.15rem;">ID: {{ user.student_faculty_id }}</div>
+                {% endif %}
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.75rem;word-break:break-all;"><strong style="color:#374151;">Email:</strong> {{ user.email }}</div>
+                {% if user.user_type == 'admin' or user.user_type == 'store_owner' %}
+                <a href="{% if user.user_type == 'admin' %}/kaon-admin/{% else %}/dashboard/{% endif %}" style="display:block;padding:0.5rem;border-radius:8px;background:#f3f4f6;color:#1a1a1a;font-size:0.8rem;font-weight:600;text-decoration:none;text-align:center;transition:background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">Dashboard</a>
+                {% else %}
+                <button onclick="handleLogout()" style="display:block;width:100%;padding:0.5rem;border:none;border-radius:8px;background:#fee2e2;color:#dc2626;font-size:0.8rem;font-weight:600;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">Logout</button>
+                {% endif %}
+              </div>
             </div>
-            <div class="d-grid gap-2">
-                <button class="btn btn-primary btn-lg" id="confirmOrderBtn">
-                    <i class="bi bi-check-circle"></i> Confirm Order
-                </button>
-                <button class="btn btn-outline-danger" id="clearCartBtn">
-                    <i class="bi bi-trash"></i> Clear Cart
-                </button>
-            </div>
+            <a href="/menu/" class="icon-btn" title="Back to menu">
+              <i data-lucide="arrow-left"></i>
+            </a>
+          </div>
         </div>
+
+        <div class="main-body">
+          <div class="section-header">
+            <h5><i data-lucide="shopping-cart" style="width:18px;height:18px;color:#ccff00;margin-right:0.35rem;"></i> Your Cart</h5>
+            <a href="/menu/" class="section-link">Add more items <i data-lucide="plus" style="width:14px;height:14px;"></i></a>
+          </div>
+
+          <div id="cartContent">
+            <div style="width:100%;text-align:center;padding:2rem;">
+              <div class="spinner-border" style="width:2rem;height:2rem;color:#1a1a1a;" role="status"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
+
+    <div class="landing-sidebar">
+      <div id="cartBottom" class="d-none" style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="sidebar-card" style="display:flex;flex-direction:column;">
+          <div style="display:flex;align-items:center;gap:0.5rem;font-weight:700;font-size:0.9rem;margin-bottom:1rem;">
+            <i data-lucide="receipt" style="width:18px;height:18px;color:#ccff00;"></i>
+            <span>Order Summary</span>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:0.5rem;">
+            <span class="text-muted">Items</span>
+            <span id="cartItemCount">0</span>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;font-size:1.1rem;font-weight:800;padding-top:0.75rem;border-top:1px solid #f3f4f6;margin-bottom:1rem;">
+            <span>Total</span>
+            <span id="cartTotal">₱0.00</span>
+          </div>
+
+          <button class="order-btn" id="confirmOrderBtn" style="font-size:0.9rem;padding:0.75rem;">
+            <i data-lucide="check" style="width:16px;height:16px;"></i> Confirm Order
+          </button>
+
+          <button style="width:100%;padding:0.6rem;border:none;border-radius:10px;background:#f3f4f6;color:#6b7280;font-size:0.8rem;font-weight:700;cursor:pointer;margin-top:0.5rem;transition:background 0.2s;" id="clearCartBtn"
+            onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+            <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Clear Cart
+          </button>
+        </div>
+
+        <a href="/menu/" class="sidebar-card" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;cursor:pointer;color:inherit;transition:transform 0.2s,box-shadow 0.2s;"
+          onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)'"
+          onmouseout="this.style.transform='';this.style.boxShadow=''">
+          <div style="width:44px;height:44px;border-radius:12px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;">
+            <i data-lucide="plus" style="width:20px;height:20px;color:#1a1a1a;"></i>
+          </div>
+          <div>
+            <h5 style="font-size:0.9rem;font-weight:700;margin-bottom:0.1rem;">Add More Items</h5>
+            <p style="font-size:0.8rem;margin:0;color:#6b7280;">Continue browsing the menu</p>
+          </div>
+        </a>
+      </div>
+
+      <div id="cartEmptySidebar" class="sidebar-card" style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:2rem 1.25rem;">
+        <i data-lucide="shopping-bag" style="width:48px;height:48px;color:#d1d5db;margin-bottom:0.75rem;"></i>
+        <h5 style="font-size:1rem;font-weight:700;margin-bottom:0.25rem;">Your cart is empty</h5>
+        <p style="font-size:0.8rem;color:#6b7280;margin-bottom:1rem;">Looks like you haven't added anything yet.</p>
+        <a href="/menu/" class="order-btn" style="text-decoration:none;font-size:0.85rem;padding:0.65rem 1.5rem;width:auto;">
+          Browse Menu <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+        </a>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1060;">
-    <div id="orderToast" class="toast" role="alert">
-        <div class="toast-body d-flex align-items-center">
-            <i class="bi bi-check-circle-fill text-success me-2"></i>
-            <span id="orderToastMsg">Order placed!</span>
-            <button type="button" class="btn-close ms-2" data-bs-dismiss="toast"></button>
-        </div>
+  <div id="orderToast" class="toast" role="alert" style="border-radius:12px;">
+    <div class="toast-body d-flex align-items-center">
+      <i data-lucide="check-circle" style="width:18px;height:18px;color:#22c55e;margin-right:0.5rem;"></i>
+      <span id="orderToastMsg" style="font-size:0.85rem;">Order placed!</span>
+      <button type="button" class="btn-close ms-2" data-bs-dismiss="toast" style="font-size:0.75rem;"></button>
     </div>
+  </div>
+</div>
+
+<div class="modal fade" id="clearCartModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="border-radius:16px;border:none;">
+      <div class="modal-body text-center" style="padding:2rem;">
+        <i data-lucide="alert-triangle" style="width:40px;height:40px;color:#ef4444;margin-bottom:1rem;"></i>
+        <h6 style="font-weight:700;margin-bottom:0.25rem;">Clear Cart?</h6>
+        <p class="text-muted small" style="margin-bottom:1.25rem;">All items will be removed from your cart.</p>
+        <div style="display:flex;gap:0.5rem;justify-content:center;">
+          <button class="btn btn-sm" style="background:#f3f4f6;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-sm" id="confirmClearCart" style="background:#ef4444;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
+function getItemBg(name) {
+  const colors = ['#e8f5e9', '#fff3e0', '#fce4ec', '#e3f2fd', '#f3e5f5', '#e0f7fa', '#fff8e1', '#fbe9e7'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function getItemIcon(category) {
+  const map = { rice: 'wheat', noodles: 'utensils-crossed', drinks: 'cup-soda', snacks: 'popcorn', desserts: 'cake-slice' };
+  return map[category] || 'coffee';
+}
+
 async function loadCart() {
-    const container = document.getElementById('cartContent');
-    const bottom = document.getElementById('cartBottom');
-    const data = await apiGet('/api/cart/');
+  const container = document.getElementById('cartContent');
+  const bottom = document.getElementById('cartBottom');
+  const emptySidebar = document.getElementById('cartEmptySidebar');
+  const data = await apiGet('/api/cart/');
 
-    if (!data || !data.items || data.items.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-5">
-                <i class="bi bi-cart-x" style="font-size:4rem;color:#dee2e6;"></i>
-                <h5 class="mt-3 text-muted">Your cart is empty</h5>
-                <a href="/menu/" class="btn btn-primary mt-3">
-                    <i class="bi bi-menu-app"></i> Browse Menu
-                </a>
-            </div>
-        `;
-        bottom.classList.add('d-none');
-        return;
-    }
+  if (!data || !data.items || data.items.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:3rem 1rem;">
+        <i data-lucide="shopping-bag" style="width:64px;height:64px;color:#d1d5db;margin-bottom:1rem;"></i>
+        <h5 style="font-size:1.1rem;font-weight:700;color:#374151;margin-bottom:0.25rem;">Your cart is empty</h5>
+        <p style="font-size:0.85rem;color:#6b7280;margin-bottom:1.25rem;">Looks like you haven't added anything yet.</p>
+        <a href="/menu/" style="display:inline-block;padding:0.65rem 1.5rem;border:none;border-radius:999px;background:#1a1a1a;color:#fff;font-size:0.85rem;font-weight:700;text-decoration:none;transition:background 0.2s,transform 0.2s;"
+          onmouseover="this.style.background='#333';this.style.transform='translateY(-1px)'"
+          onmouseout="this.style.background='#1a1a1a';this.style.transform=''">
+          Browse Menu <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+        </a>
+      </div>
+    `;
+    lucide.createIcons();
+    bottom.classList.add('d-none');
+    bottom.style.display = 'none';
+    emptySidebar.style.display = 'flex';
+    return;
+  }
 
-    container.innerHTML = data.items.map(item => `
-        <div class="card shadow-sm border-0 mb-2">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1">${item.item_name}</h6>
-                        <small class="text-muted">₱${parseFloat(item.item_price).toFixed(2)} each</small>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <button class="btn btn-outline-secondary btn-sm qty-minus" data-id="${item.cart_item_id}">-</button>
-                        <span class="fw-bold mx-1 qty-display" data-id="${item.cart_item_id}">${item.quantity}</span>
-                        <button class="btn btn-outline-secondary btn-sm qty-plus" data-id="${item.cart_item_id}">+</button>
-                        <span class="fw-bold text-success ms-2" style="min-width:70px;text-align:right;">
-                            ₱${parseFloat(item.subtotal).toFixed(2)}
-                        </span>
-                        <button class="btn btn-outline-danger btn-sm ms-2 remove-item" data-id="${item.cart_item_id}">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `).join('');
+  bottom.classList.remove('d-none');
+  bottom.style.display = 'flex';
+  emptySidebar.style.display = 'none';
 
-    document.getElementById('cartTotal').textContent = `₱${parseFloat(data.total_price).toFixed(2)}`;
-    bottom.classList.remove('d-none');
+  document.getElementById('cartItemCount').textContent = data.items.length;
 
-    document.querySelectorAll('.qty-plus').forEach(btn => {
-        btn.addEventListener('click', async function() {
-            const id = this.dataset.id;
-            const display = document.querySelector(`.qty-display[data-id="${id}"]`);
-            const newQty = parseInt(display.textContent) + 1;
-            await updateQuantity(id, newQty);
-        });
+  container.innerHTML = data.items.map(item => `
+    <div class="sidebar-card" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;margin-bottom:0.5rem;">
+      <div style="width:48px;height:48px;border-radius:12px;background:${getItemBg(item.item_name)};display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;${item.item_image ? 'padding:0;' : ''}">
+        ${item.item_image ? `<img src="${item.item_image}" alt="${item.item_name}" style="width:100%;height:100%;object-fit:cover;">` : `<i data-lucide="${getItemIcon(item.category || '')}" style="width:20px;height:20px;color:#6b7280;"></i>`}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <h6 style="font-size:0.85rem;font-weight:700;margin-bottom:0.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.item_name}</h6>
+        <small style="color:#6b7280;font-size:0.75rem;">₱${parseFloat(item.item_price).toFixed(2)} each</small>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.25rem;">
+        <button class="qty-minus" data-id="${item.cart_item_id}"
+          style="width:28px;height:28px;border-radius:50%;border:1.5px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;transition:all 0.15s;"
+          onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#fff'">−</button>
+        <span class="qty-display" data-id="${item.cart_item_id}" style="font-weight:700;font-size:0.85rem;min-width:24px;text-align:center;">${item.quantity}</span>
+        <button class="qty-plus" data-id="${item.cart_item_id}"
+          style="width:28px;height:28px;border-radius:50%;border:1.5px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;transition:all 0.15s;"
+          onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#fff'">+</button>
+      </div>
+      <div style="text-align:right;min-width:65px;">
+        <span style="font-weight:800;font-size:0.9rem;color:#1a1a1a;">₱${parseFloat(item.subtotal).toFixed(2)}</span>
+        <br>
+        <button class="remove-item" data-id="${item.cart_item_id}"
+          style="border:none;background:none;color:#9ca3af;font-size:0.7rem;cursor:pointer;padding:0;text-decoration:underline;transition:color 0.15s;"
+          onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#9ca3af'">Remove</button>
+      </div>
+    </div>
+  `).join('');
+
+  lucide.createIcons();
+
+  document.getElementById('cartTotal').textContent = `₱${parseFloat(data.total_price).toFixed(2)}`;
+
+  document.querySelectorAll('.qty-plus').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      const id = this.dataset.id;
+      const display = document.querySelector(`.qty-display[data-id="${id}"]`);
+      const newQty = parseInt(display.textContent) + 1;
+      await updateQuantity(id, newQty);
     });
+  });
 
-    document.querySelectorAll('.qty-minus').forEach(btn => {
-        btn.addEventListener('click', async function() {
-            const id = this.dataset.id;
-            const display = document.querySelector(`.qty-display[data-id="${id}"]`);
-            const newQty = Math.max(0, parseInt(display.textContent) - 1);
-            await updateQuantity(id, newQty);
-        });
+  document.querySelectorAll('.qty-minus').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      const id = this.dataset.id;
+      const display = document.querySelector(`.qty-display[data-id="${id}"]`);
+      const newQty = Math.max(0, parseInt(display.textContent) - 1);
+      await updateQuantity(id, newQty);
     });
+  });
 
-    document.querySelectorAll('.remove-item').forEach(btn => {
-        btn.addEventListener('click', async function() {
-            await updateQuantity(this.dataset.id, 0);
-        });
+  document.querySelectorAll('.remove-item').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      await updateQuantity(this.dataset.id, 0);
     });
+  });
 }
 
 async function updateQuantity(cartItemId, quantity) {
-    const result = await apiPatch(`/api/cart/item/${cartItemId}/`, { quantity });
-    if (result) {
-        loadCart();
-        updateGlobalCart();
-    }
+  const result = await apiPatch(`/api/cart/item/${cartItemId}/`, { quantity });
+  if (result) {
+    loadCart();
+    updateGlobalCart();
+  }
 }
 
 async function updateGlobalCart() {
-    const data = await apiGet('/api/cart/');
-    if (data) {
-        const badge = document.getElementById('cartCountBadge');
-        if (badge) {
-            badge.textContent = data.total_items || 0;
-            badge.style.display = (data.total_items || 0) > 0 ? '' : 'none';
-        }
+  const data = await apiGet('/api/cart/');
+  if (data) {
+    const badge = document.getElementById('cartCountBadge');
+    if (badge) {
+      badge.textContent = data.total_items || 0;
+      badge.style.display = (data.total_items || 0) > 0 ? 'flex' : 'none';
     }
+  }
 }
 
 document.getElementById('confirmOrderBtn')?.addEventListener('click', async function() {
-    this.disabled = true;
-    this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Placing order...';
+  this.disabled = true;
+  this.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:14px;height:14px;"></span> Placing order...';
 
-    const result = await apiPost('/api/orders/place/', {});
+  const result = await apiPost('/api/orders/place/', {});
 
-    if (result && result.order_number) {
-        showAlert(`Order #${result.order_number} placed successfully!`, 'success');
-        setTimeout(() => {
-            window.location.href = `/order/${result.order_id}/`;
-        }, 1000);
-    } else {
-        this.disabled = false;
-        this.innerHTML = '<i class="bi bi-check-circle"></i> Confirm Order';
-    }
+  if (result && result.order_number) {
+    showToast(`Order #${result.order_number} placed successfully!`, 'success');
+    setTimeout(() => {
+      window.location.href = `/order/${result.order_id}/`;
+    }, 1000);
+  } else {
+    this.disabled = false;
+    this.innerHTML = '<i data-lucide="check" style="width:16px;height:16px;"></i> Confirm Order';
+    lucide.createIcons();
+  }
 });
 
-document.getElementById('clearCartBtn')?.addEventListener('click', async function() {
-    if (!confirm('Clear all items from your cart?')) return;
-    await apiDelete('/api/cart/clear/');
-    loadCart();
-    updateGlobalCart();
+document.getElementById('clearCartBtn')?.addEventListener('click', function() {
+  new bootstrap.Modal(document.getElementById('clearCartModal')).show();
+});
+
+document.getElementById('confirmClearCart')?.addEventListener('click', async function() {
+  bootstrap.Modal.getInstance(document.getElementById('clearCartModal')).hide();
+  await apiDelete('/api/cart/clear/');
+  loadCart();
+  updateGlobalCart();
+});
+
+function showToast(msg) {
+  document.getElementById('orderToastMsg').textContent = msg;
+  lucide.createIcons();
+  const toast = new bootstrap.Toast(document.getElementById('orderToast'), { delay: 2500 });
+  toast.show();
+}
+
+async function handleLogout() {
+  await apiPost('/api/auth/logout/', {});
+  clearTokens();
+  window.location.href = '/';
+}
+
+document.getElementById('profileBtn')?.addEventListener('click', function(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('profileDropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+});
+document.addEventListener('click', function() {
+  const dd = document.getElementById('profileDropdown');
+  if (dd) dd.style.display = 'none';
+});
+document.getElementById('profileDropdown')?.addEventListener('click', function(e) {
+  e.stopPropagation();
 });
 
 loadCart();
