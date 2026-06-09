@@ -38,6 +38,9 @@ function setUser(user) {
 async function apiRequest(url, options = {}) {
     const token = getToken();
     const headers = options.headers || {};
+    const timeout = options.timeout || 60000;
+    const controller = new AbortController();
+    const timer = setTimeout(function() { controller.abort(); }, timeout);
 
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -47,27 +50,44 @@ async function apiRequest(url, options = {}) {
         headers['Content-Type'] = 'application/json';
     }
 
-    const response = await fetch(`${API_BASE}${url}`, {
-        ...options,
-        headers,
-    });
+    function doFetch() {
+        return fetch(`${API_BASE}${url}`, {
+            ...options,
+            headers,
+            signal: controller.signal,
+        });
+    }
+
+    let response;
+    try {
+        response = await doFetch();
+    } catch (e) {
+        clearTimeout(timer);
+        if (e.name === 'AbortError') {
+            throw new Error('Request timed out. Please try again.');
+        }
+        throw e;
+    }
 
     if (response.status === 401 && getRefreshToken()) {
         const refreshed = await refreshAccessToken();
         if (refreshed) {
             headers['Authorization'] = `Bearer ${getToken()}`;
-            const retryResponse = await fetch(`${API_BASE}${url}`, {
-                ...options,
-                headers,
-            });
-            return retryResponse;
+            try {
+                response = await doFetch();
+            } catch (e) {
+                clearTimeout(timer);
+                throw e;
+            }
         } else {
+            clearTimeout(timer);
             clearTokens();
             window.location.href = '/login/';
             return null;
         }
     }
 
+    clearTimeout(timer);
     return response;
 }
 

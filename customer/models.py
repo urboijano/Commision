@@ -11,7 +11,7 @@ class User(AbstractUser):
         ('admin', 'Admin'),
     ]
     user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES)
+    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, db_index=True)
     student_faculty_id = models.CharField(max_length=30, unique=True, blank=True, null=True)
     store_name = models.CharField(max_length=200, blank=True, default='')
     dti_permit = models.ImageField(upload_to='dti_permits/', blank=True, null=True)
@@ -21,15 +21,27 @@ class User(AbstractUser):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'full_name', 'user_type', 'student_faculty_id']
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['is_active'], name='idx_user_is_active'),
+        ]
+        verbose_name = 'user'
+        verbose_name_plural = 'users'
+
     def __str__(self):
         return f"{self.full_name} ({self.student_faculty_id})"
 
 
 class PasswordResetCode(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_index=False)
     code = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'is_used'], name='idx_reset_user_used'),
+        ]
 
     def __str__(self):
         return f"{self.user.email} - {self.code}"
@@ -118,8 +130,8 @@ class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
     order_number = models.CharField(max_length=20, unique=True, editable=False)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='received')
-    payment_status = models.CharField(max_length=10, choices=PAYMENT_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='received', db_index=True)
+    payment_status = models.CharField(max_length=10, choices=PAYMENT_CHOICES, default='pending', db_index=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -162,6 +162,36 @@ function showTosModal() {
     new bootstrap.Modal(document.getElementById('tosModal')).show();
 }
 
+function compressImageFile(file, maxWidth, quality) {
+    return new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var img = new Image();
+            img.onload = function() {
+                var canvas = document.createElement('canvas');
+                var w = img.width, h = img.height;
+                if (w > maxWidth) {
+                    h = Math.round(h * maxWidth / w);
+                    w = maxWidth;
+                }
+                canvas.width = w;
+                canvas.height = h;
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                canvas.toBlob(function(blob) {
+                    var name = file.name.replace(/\.(png|jpe?g)$/i, '.jpg');
+                    var compressed = new File([blob], name, { type: 'image/jpeg' });
+                    resolve(compressed);
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = function() { resolve(file); };
+            img.src = e.target.result;
+        };
+        reader.onerror = function() { resolve(file); };
+        reader.readAsDataURL(file);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     const pwInput = document.getElementById('password');
     if (pwInput) {
@@ -236,24 +266,30 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Uploading...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Compressing...';
 
-        const formData = new FormData();
-        formData.append('full_name', document.getElementById('fullName').value);
-        formData.append('store_name', document.getElementById('storeName').value);
-        formData.append('email', document.getElementById('email').value);
-        formData.append('password', password);
-        formData.append('dti_permit', dtiFile);
+        try {
+            const compressedFile = await compressImageFile(dtiFile, 1200, 0.75);
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Uploading...';
+            const formData = new FormData();
+            formData.append('full_name', document.getElementById('fullName').value);
+            formData.append('store_name', document.getElementById('storeName').value);
+            formData.append('email', document.getElementById('email').value);
+            formData.append('password', password);
+            formData.append('dti_permit', compressedFile);
 
-        const result = await apiPostFormData('/api/auth/register/store/', formData);
+            const result = await apiPostFormData('/api/auth/register/store/', formData);
 
-        if (result && result.message) {
-            showAlert(result.message, 'success');
-            setTimeout(function() { window.location.href = '/login/'; }, 2000);
-        } else {
-            btn.disabled = false;
-            btn.innerHTML = 'Create Store Account';
+            if (result && result.message) {
+                showAlert(result.message, 'success');
+                setTimeout(function() { window.location.href = '/login/'; }, 2000);
+                return;
+            }
+        } catch (e) {
+            if (e && e.message) showAlert(e.message, 'danger');
         }
+        btn.disabled = false;
+        btn.innerHTML = 'Create Store Account';
     });
 });
 </script>

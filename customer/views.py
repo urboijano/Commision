@@ -1,14 +1,18 @@
+import io
 import json
 import random
 from decimal import Decimal
+
 from django.conf import settings
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.mail import EmailMultiAlternatives
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth import authenticate, login as django_login, logout as django_logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
+from PIL import Image
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -37,6 +41,22 @@ def get_tokens_for_user(user):
     }
 
 
+def compress_image(uploaded_file, max_width=1200, quality=75):
+    img = Image.open(uploaded_file)
+    if img.mode in ('RGBA', 'P'):
+        img = img.convert('RGB')
+    if img.width > max_width:
+        ratio = max_width / img.width
+        img = img.resize((max_width, int(img.height * ratio)), Image.LANCZOS)
+    buf = io.BytesIO()
+    img.save(buf, format='JPEG', quality=quality, optimize=True)
+    buf.seek(0)
+    return InMemoryUploadedFile(
+        buf, 'ImageField', uploaded_file.name.replace('.png', '.jpg').replace('.PNG', '.jpg'),
+        'image/jpeg', buf.getbuffer().nbytes, None
+    )
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
@@ -46,30 +66,23 @@ def register(request):
 
     data = serializer.validated_data
 
-    if User.objects.filter(email=data['email']).exists():
+    try:
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=data['email'],
+                email=data['email'],
+                password=data['password'],
+                full_name=data['full_name'],
+                user_type=data['user_type'],
+                student_faculty_id=data['student_faculty_id'],
+                is_active=False,
+            )
+            Cart.objects.create(user=user)
+    except IntegrityError:
         return Response(
-            {'error': 'An account with this email already exists.'},
+            {'error': 'An account with this email or ID already exists.'},
             status=status.HTTP_400_BAD_REQUEST
         )
-
-    if User.objects.filter(student_faculty_id=data['student_faculty_id']).exists():
-        return Response(
-            {'error': 'This student/faculty ID is already registered.'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    with transaction.atomic():
-        user = User.objects.create_user(
-            username=data['email'],
-            email=data['email'],
-            password=data['password'],
-            full_name=data['full_name'],
-            user_type=data['user_type'],
-            student_faculty_id=data['student_faculty_id'],
-            is_active=False,
-        )
-
-        Cart.objects.create(user=user)
 
     return Response({
         'message': 'Registration submitted. Your account is pending admin approval.',
@@ -85,29 +98,28 @@ def store_register(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     data = serializer.validated_data
+    dti_permit = request.FILES.get('dti_permit')
 
-    if User.objects.filter(email=data['email']).exists():
+    try:
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=data['email'],
+                email=data['email'],
+                password=data['password'],
+                full_name=data['full_name'],
+                store_name=data['store_name'],
+                user_type='store_owner',
+                student_faculty_id=None,
+                is_active=False,
+            )
+            if dti_permit:
+                user.dti_permit = compress_image(dti_permit)
+                user.save()
+    except IntegrityError:
         return Response(
             {'error': 'An account with this email already exists.'},
             status=status.HTTP_400_BAD_REQUEST
         )
-
-    dti_permit = request.FILES.get('dti_permit')
-
-    user = User.objects.create_user(
-        username=data['email'],
-        email=data['email'],
-        password=data['password'],
-        full_name=data['full_name'],
-        store_name=data['store_name'],
-        user_type='store_owner',
-        student_faculty_id=None,
-        is_active=False,
-    )
-
-    if dti_permit:
-        user.dti_permit = dti_permit
-        user.save()
 
     return Response({
         'message': 'Registration submitted. Your account is pending admin approval.',
@@ -204,6 +216,15 @@ def login(request):
     user = authenticate(username=data['email'], password=data['password'])
 
     if not user:
+        try:
+            existing_user = User.objects.get(email=data['email'])
+            if not existing_user.is_active:
+                return Response(
+                    {'error': 'Your account is pending admin approval. Please wait for approval before logging in.'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+        except User.DoesNotExist:
+            pass
         return Response(
             {'error': 'Invalid email or password.'},
             status=status.HTTP_401_UNAUTHORIZED
@@ -244,7 +265,7 @@ def menu_list(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_cart(request):
-    cart, _ = Cart.objects.get_or_create(user=request.user)
+    cart, _ = Cart.objects.prefetch_related('items__item').get_or_create(user=request.user)
     serializer = CartSerializer(cart)
     return Response(serializer.data)
 
@@ -259,7 +280,7 @@ def add_to_cart(request):
     data = serializer.validated_data
     menu_item = get_object_or_404(MenuItem, item_id=data['item_id'], is_available=True)
 
-    cart, _ = Cart.objects.get_or_create(user=request.user)
+    cart, _ = Cart.objects.prefetch_related('items__item').get_or_create(user=request.user)
 
     cart_item, created = CartItem.objects.get_or_create(
         cart=cart,
@@ -270,6 +291,7 @@ def add_to_cart(request):
         cart_item.quantity += data['quantity']
         cart_item.save()
 
+    cart = Cart.objects.prefetch_related('items__item').get(pk=cart.pk)
     return Response(CartSerializer(cart).data)
 
 
@@ -288,7 +310,7 @@ def update_cart_item(request, cart_item_id):
         cart_item.quantity = qty
         cart_item.save()
 
-    cart = Cart.objects.get(user=request.user)
+    cart = Cart.objects.prefetch_related('items__item').get(user=request.user)
     return Response(CartSerializer(cart).data)
 
 
@@ -660,6 +682,38 @@ def admin_approve_user(request, user_id):
         return Response({'error': 'User is already active.'}, status=status.HTTP_400_BAD_REQUEST)
     user.is_active = True
     user.save()
+
+    login_url = request.build_absolute_uri('/login/')
+    html_content = f'''
+    <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04);font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+      <div style="background:#1a1a1a;padding:1.5rem;text-align:center;">
+        <span style="font-size:1.4rem;font-weight:800;color:#ccff00;">KaonISU</span>
+      </div>
+      <div style="padding:1.5rem;">
+        <h2 style="font-size:1.1rem;font-weight:700;color:#1a1a1a;margin:0 0 0.5rem;">Account Approved</h2>
+        <p style="font-size:0.85rem;color:#6b7280;margin:0 0 1rem;">Hi {user.full_name}, your account has been approved. You can now log in and start using KaonISU.</p>
+        <div style="text-align:center;margin-bottom:0.5rem;">
+          <a href="{login_url}" style="display:inline-block;background:#1a1a1a;color:#ccff00;font-weight:700;padding:0.75rem 2rem;border-radius:12px;text-decoration:none;font-size:0.9rem;">Log In Now</a>
+        </div>
+      </div>
+      <div style="background:#f9fafb;padding:1rem;text-align:center;border-top:1px solid #f0f0f0;">
+        <span style="font-size:0.75rem;color:#9ca3af;">&copy; 2026 KaonISU. All rights reserved.</span>
+      </div>
+    </div>
+    '''
+    text_content = f'Hi {user.full_name}, your account has been approved. You can now log in at {login_url}.'
+    try:
+        msg = EmailMultiAlternatives(
+            'Account Approved - KaonISU',
+            text_content,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+        )
+        msg.attach_alternative(html_content, 'text/html')
+        msg.send(fail_silently=False)
+    except Exception:
+        pass
+
     return Response({'message': 'User approved.', 'user': UserSerializer(user).data})
 
 
@@ -671,6 +725,34 @@ def admin_reject_user(request, user_id):
     user = get_object_or_404(User, user_id=user_id)
     if user.is_active:
         return Response({'error': 'Cannot reject an active user. Delete instead.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    html_content = f'''
+    <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04);font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+      <div style="background:#1a1a1a;padding:1.5rem;text-align:center;">
+        <span style="font-size:1.4rem;font-weight:800;color:#ccff00;">KaonISU</span>
+      </div>
+      <div style="padding:1.5rem;">
+        <h2 style="font-size:1.1rem;font-weight:700;color:#1a1a1a;margin:0 0 0.5rem;">Registration Not Approved</h2>
+        <p style="font-size:0.85rem;color:#6b7280;margin:0;">Hi {user.full_name}, we regret to inform you that your account registration was not approved. If you believe this is a mistake, please contact support.</p>
+      </div>
+      <div style="background:#f9fafb;padding:1rem;text-align:center;border-top:1px solid #f0f0f0;">
+        <span style="font-size:0.75rem;color:#9ca3af;">&copy; 2026 KaonISU. All rights reserved.</span>
+      </div>
+    </div>
+    '''
+    text_content = f'Hi {user.full_name}, your account registration was not approved. If you believe this is a mistake, please contact support.'
+    try:
+        msg = EmailMultiAlternatives(
+            'Registration Update - KaonISU',
+            text_content,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+        )
+        msg.attach_alternative(html_content, 'text/html')
+        msg.send(fail_silently=False)
+    except Exception:
+        pass
+
     user.delete()
     return Response({'message': 'User rejected and deleted.'})
 

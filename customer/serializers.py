@@ -1,5 +1,6 @@
 import re
 
+from django.db import models
 from rest_framework import serializers
 from .models import (
     User, ValidID, MenuItem, Cart, CartItem,
@@ -139,10 +140,25 @@ class CartSerializer(serializers.ModelSerializer):
         fields = ['cart_id', 'items', 'total_items', 'total_price', 'updated_at']
 
     def get_total_items(self, obj):
-        return sum(item.quantity for item in obj.items.all())
+        try:
+            cached = getattr(obj, '_prefetched_objects_cache', {})
+            if 'items' in cached:
+                return sum(item.quantity for item in cached['items'])
+        except Exception:
+            pass
+        return obj.items.aggregate(total=models.Sum('quantity'))['total'] or 0
 
     def get_total_price(self, obj):
-        return sum(item.item.price * item.quantity for item in obj.items.all())
+        try:
+            cached = getattr(obj, '_prefetched_objects_cache', {})
+            if 'items' in cached:
+                return sum(item.item.price * item.quantity for item in cached['items'])
+        except Exception:
+            pass
+        return sum(
+            item.item.price * item.quantity
+            for item in obj.items.select_related('item').only('item__price', 'quantity')
+        )
 
 
 class AddCartItemSerializer(serializers.Serializer):
