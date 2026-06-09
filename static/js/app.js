@@ -147,6 +147,20 @@ async function apiPost(url, data) {
     return result;
 }
 
+async function apiPostFormData(url, formData) {
+    const response = await apiRequest(url, {
+        method: 'POST',
+        body: formData,
+    });
+    if (!response) return null;
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        showAlert(extractError(result), 'danger');
+        return null;
+    }
+    return result;
+}
+
 async function apiPatch(url, data) {
     const response = await apiRequest(url, {
         method: 'PATCH',

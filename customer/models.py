@@ -14,6 +14,7 @@ class User(AbstractUser):
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES)
     student_faculty_id = models.CharField(max_length=30, unique=True, blank=True, null=True)
     store_name = models.CharField(max_length=200, blank=True, default='')
+    dti_permit = models.ImageField(upload_to='dti_permits/', blank=True, null=True)
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=100)
 

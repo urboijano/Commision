@@ -52,6 +52,7 @@ class StoreRegisterSerializer(serializers.Serializer):
     store_name = serializers.CharField(max_length=200)
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+    dti_permit = serializers.ImageField(required=True)
 
     def validate_password(self, value):
         errors = []
@@ -100,7 +101,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['user_id', 'full_name', 'email', 'user_type', 'user_type_display', 'student_faculty_id', 'store_name', 'is_active', 'date_joined']
+        fields = ['user_id', 'full_name', 'email', 'user_type', 'user_type_display', 'student_faculty_id', 'store_name', 'dti_permit', 'is_active', 'date_joined']
 
 
 class MenuItemSerializer(serializers.ModelSerializer):

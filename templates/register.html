@@ -304,10 +304,9 @@ document.addEventListener('DOMContentLoaded', function () {
             password: password,
         });
 
-        if (result && result.tokens) {
-            setTokens(result.tokens.access, result.tokens.refresh);
-            setUser(result.user);
-            window.location.href = '/menu/';
+        if (result && result.message) {
+            showAlert(result.message, 'success');
+            setTimeout(function() { window.location.href = '/login/'; }, 2000);
         } else {
             btn.disabled = false;
             spinner.classList.add('d-none');

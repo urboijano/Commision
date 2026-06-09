@@ -18,56 +18,67 @@
     <div class="sidebar-card" style="padding: 2rem;">
       <h4 style="text-align: center; margin-bottom: 1.5rem; font-weight: 700;">Store Owner Registration</h4>
       <form id="storeRegisterForm">
-        <div class="auth-field">
-          <div class="auth-input-group">
-            <span class="auth-input-icon"><i data-lucide="user" style="width: 18px; height: 18px;"></i></span>
-            <input type="text" class="auth-input" id="fullName" required maxlength="100" pattern="[A-Za-zÀ-ÿ\s.]+,\s[A-Za-zÀ-ÿ\s.]+" title="Format: Surname, First Name M.I." placeholder=" " autocomplete="name" oninput="this.value = this.value.replace(/[0-9]/g, '')">
-            <label class="auth-label" for="fullName">Full Name</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem;">
+          <div class="auth-field">
+            <div class="auth-input-group">
+              <span class="auth-input-icon"><i data-lucide="user" style="width: 18px; height: 18px;"></i></span>
+              <input type="text" class="auth-input" id="fullName" required maxlength="100" pattern="[A-Za-zÀ-ÿ\s.]+,\s[A-Za-zÀ-ÿ\s.]+" title="Format: Surname, First Name M.I." placeholder=" " autocomplete="name" oninput="this.value = this.value.replace(/[0-9]/g, '')">
+              <label class="auth-label" for="fullName">Full Name</label>
+            </div>
+            <div class="auth-hint">Format: Surname, First Name M.I. (e.g. Dela Cruz, Juan P.)</div>
           </div>
-          <div class="auth-hint">Format: Surname, First Name M.I. (e.g. Dela Cruz, Juan P.)</div>
-        </div>
-
-        <div class="auth-field">
-          <div class="auth-input-group">
-            <span class="auth-input-icon"><i data-lucide="store" style="width: 18px; height: 18px;"></i></span>
-            <input type="text" class="auth-input" id="storeName" required maxlength="200" placeholder=" " autocomplete="off">
-            <label class="auth-label" for="storeName">Store Name</label>
+          <div class="auth-field">
+            <div class="auth-input-group">
+              <span class="auth-input-icon"><i data-lucide="store" style="width: 18px; height: 18px;"></i></span>
+              <input type="text" class="auth-input" id="storeName" required maxlength="200" placeholder=" " autocomplete="off">
+              <label class="auth-label" for="storeName">Store Name</label>
+            </div>
           </div>
-        </div>
 
-        <div class="auth-field">
-          <div class="auth-input-group">
-            <span class="auth-input-icon"><i data-lucide="mail" style="width: 18px; height: 18px;"></i></span>
-            <input type="email" class="auth-input" id="email" required placeholder=" " autocomplete="email">
-            <label class="auth-label" for="email">Email</label>
+          <div class="auth-field">
+            <div class="auth-input-group">
+              <span class="auth-input-icon"><i data-lucide="mail" style="width: 18px; height: 18px;"></i></span>
+              <input type="email" class="auth-input" id="email" required placeholder=" " autocomplete="email">
+              <label class="auth-label" for="email">Email</label>
+            </div>
           </div>
-        </div>
+          <div class="auth-field">
+            <div class="auth-input-group">
+              <span class="auth-input-icon"><i data-lucide="file-image" style="width: 18px; height: 18px;"></i></span>
+              <label class="auth-input" for="dtiPermit" style="display:flex;align-items:center;cursor:pointer;padding:0.75rem 1rem 0.75rem 2.75rem;">
+                <input type="file" id="dtiPermit" required accept="image/*" style="display:none;" onchange="var f=this.files[0];document.getElementById('dtiFileName').textContent=f?f.name+(f.size>5*1024*1024?' (too large!)':' ('+Math.round(f.size/1024)+'KB)'):'Choose file...';">
+                <span id="dtiFileName" style="color:#9ca3af;font-size:0.85rem;">Choose file...</span>
+              </label>
+              <label class="auth-label" for="dtiPermit" style="cursor:pointer;transform:translateY(-22px) scale(0.85);color:#1a1a1a;">DTI Permit</label>
+            </div>
+            <div class="auth-hint">Upload a clear photo of your DTI/SEC permit (max 5MB).</div>
+          </div>
 
-        <div class="auth-field">
-          <div class="auth-input-group">
-            <span class="auth-input-icon"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
-            <input type="password" class="auth-input" id="password" required minlength="8" placeholder=" " autocomplete="new-password">
-            <label class="auth-label" for="password">Password</label>
-            <button class="auth-pw-toggle" type="button" data-target="password" tabindex="-1">
-              <i class="bi bi-eye-slash"></i>
-            </button>
+          <div class="auth-field">
+            <div class="auth-input-group">
+              <span class="auth-input-icon"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
+              <input type="password" class="auth-input" id="password" required minlength="8" placeholder=" " autocomplete="new-password">
+              <label class="auth-label" for="password">Password</label>
+              <button class="auth-pw-toggle" type="button" data-target="password" tabindex="-1">
+                <i class="bi bi-eye-slash"></i>
+              </button>
+            </div>
+          </div>
+          <div class="auth-field">
+            <div class="auth-input-group">
+              <span class="auth-input-icon"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
+              <input type="password" class="auth-input" id="confirmPassword" required placeholder=" " autocomplete="new-password">
+              <label class="auth-label" for="confirmPassword">Confirm Password</label>
+              <button class="auth-pw-toggle" type="button" data-target="confirmPassword" tabindex="-1">
+                <i class="bi bi-eye-slash"></i>
+              </button>
+            </div>
           </div>
         </div>
 
         <div class="auth-hint" style="margin-top: -0.75rem;">Must have 8+ characters, uppercase, lowercase, digit, and special character.</div>
         <div class="auth-strength-bar" style="margin-bottom: 1rem;">
           <div id="pwStrength" class="auth-strength-fill"></div>
-        </div>
-
-        <div class="auth-field">
-          <div class="auth-input-group">
-            <span class="auth-input-icon"><i data-lucide="lock" style="width: 18px; height: 18px;"></i></span>
-            <input type="password" class="auth-input" id="confirmPassword" required placeholder=" " autocomplete="new-password">
-            <label class="auth-label" for="confirmPassword">Confirm Password</label>
-            <button class="auth-pw-toggle" type="button" data-target="confirmPassword" tabindex="-1">
-              <i class="bi bi-eye-slash"></i>
-            </button>
-          </div>
         </div>
 
         <div class="auth-field" style="margin-top: 0.5rem;">
@@ -194,9 +205,6 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        btn.disabled = true;
-        spinner.classList.remove('d-none');
-
         const password = document.getElementById('password').value;
         const confirm = document.getElementById('confirmPassword').value;
         const criteria = checkPasswordCriteria(password);
@@ -205,31 +213,46 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!allMet) {
             showAlert('Password must have 8+ characters, an uppercase letter, a lowercase letter, a digit, and a special character.', 'danger');
             btn.disabled = false;
-            spinner.classList.add('d-none');
             return;
         }
 
         if (password !== confirm) {
             showAlert('Passwords do not match.', 'danger');
             btn.disabled = false;
-            spinner.classList.add('d-none');
             return;
         }
 
-        const result = await apiPost('/api/auth/register/store/', {
-            full_name: document.getElementById('fullName').value,
-            store_name: document.getElementById('storeName').value,
-            email: document.getElementById('email').value,
-            password: password,
-        });
+        const dtiFile = document.getElementById('dtiPermit').files[0];
+        if (!dtiFile) {
+            showAlert('Please upload your DTI permit photo.', 'danger');
+            btn.disabled = false;
+            return;
+        }
 
-        if (result && result.tokens) {
-            setTokens(result.tokens.access, result.tokens.refresh);
-            setUser(result.user);
-            window.location.href = '/dashboard/';
+        if (dtiFile.size > 5 * 1024 * 1024) {
+            showAlert('DTI permit photo must be under 5MB.', 'danger');
+            btn.disabled = false;
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Uploading...';
+
+        const formData = new FormData();
+        formData.append('full_name', document.getElementById('fullName').value);
+        formData.append('store_name', document.getElementById('storeName').value);
+        formData.append('email', document.getElementById('email').value);
+        formData.append('password', password);
+        formData.append('dti_permit', dtiFile);
+
+        const result = await apiPostFormData('/api/auth/register/store/', formData);
+
+        if (result && result.message) {
+            showAlert(result.message, 'success');
+            setTimeout(function() { window.location.href = '/login/'; }, 2000);
         } else {
             btn.disabled = false;
-            spinner.classList.add('d-none');
+            btn.innerHTML = 'Create Store Account';
         }
     });
 });

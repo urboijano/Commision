@@ -66,16 +66,14 @@ def register(request):
             full_name=data['full_name'],
             user_type=data['user_type'],
             student_faculty_id=data['student_faculty_id'],
+            is_active=False,
         )
 
         Cart.objects.create(user=user)
 
-    django_login(request, user)
-
-    tokens = get_tokens_for_user(user)
     return Response({
+        'message': 'Registration submitted. Your account is pending admin approval.',
         'user': UserSerializer(user).data,
-        'tokens': tokens,
     }, status=status.HTTP_201_CREATED)
 
 
@@ -94,6 +92,8 @@ def store_register(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    dti_permit = request.FILES.get('dti_permit')
+
     user = User.objects.create_user(
         username=data['email'],
         email=data['email'],
@@ -102,14 +102,16 @@ def store_register(request):
         store_name=data['store_name'],
         user_type='store_owner',
         student_faculty_id=None,
+        is_active=False,
     )
 
-    django_login(request, user)
+    if dti_permit:
+        user.dti_permit = dti_permit
+        user.save()
 
-    tokens = get_tokens_for_user(user)
     return Response({
+        'message': 'Registration submitted. Your account is pending admin approval.',
         'user': UserSerializer(user).data,
-        'tokens': tokens,
     }, status=status.HTTP_201_CREATED)
 
 
@@ -646,6 +648,31 @@ def admin_users(request):
     users = User.objects.all().order_by('-date_joined')
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_approve_user(request, user_id):
+    if request.user.user_type != 'admin':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    user = get_object_or_404(User, user_id=user_id)
+    if user.is_active:
+        return Response({'error': 'User is already active.'}, status=status.HTTP_400_BAD_REQUEST)
+    user.is_active = True
+    user.save()
+    return Response({'message': 'User approved.', 'user': UserSerializer(user).data})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_reject_user(request, user_id):
+    if request.user.user_type != 'admin':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    user = get_object_or_404(User, user_id=user_id)
+    if user.is_active:
+        return Response({'error': 'Cannot reject an active user. Delete instead.'}, status=status.HTTP_400_BAD_REQUEST)
+    user.delete()
+    return Response({'message': 'User rejected and deleted.'})
 
 
 @api_view(['DELETE'])

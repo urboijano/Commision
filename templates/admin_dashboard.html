@@ -146,10 +146,10 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
         <div class="card" style="margin:0;">
           <div class="card-header">
-            <h5>Pending Approval</h5>
+            <h5>Pending Store Approvals</h5>
             <span id="pendingCount" class="badge" style="background:#f59e0b;color:#fff;">0</span>
           </div>
           <div class="card-body" style="padding:0.75rem;">
@@ -259,15 +259,29 @@ function renderPending() {
     container.innerHTML = '<div class="text-muted small text-center py-3">No pending approvals.</div>';
     return;
   }
-  container.innerHTML = pending.map(u =>
-    '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.6rem;border-radius:8px;background:#f9fafb;">' +
-      '<div style="display:flex;align-items:center;gap:0.5rem;min-width:0;">' +
-        '<div class="user-avatar-sm" style="width:28px;height:28px;font-size:0.65rem;background:#fef3c7;color:#92400e;">' + (u.full_name ? u.full_name.charAt(0).toUpperCase() : '?') + '</div>' +
-        '<div style="min-width:0;"><strong style="font-size:0.8rem;">' + escapeHtml(u.full_name) + '</strong><span class="text-muted small d-block" style="font-size:0.7rem;">' + escapeHtml(u.email) + '</span></div>' +
+  container.innerHTML = pending.map(u => {
+    const isStore = u.user_type === 'store_owner';
+    const typeLabel = u.user_type_display || u.user_type;
+    const typeBadge = isStore ? '#f97316' : (u.user_type === 'faculty' ? '#3b82f6' : '#16a34a');
+    const extraInfo = isStore ? ('Store: ' + escapeHtml(u.store_name)) : ('ID: ' + escapeHtml(u.student_faculty_id));
+    const docSection = isStore
+      ? (u.dti_permit ? '<div style="margin-bottom:0.4rem;"><a href="' + u.dti_permit + '" target="_blank" style="font-size:0.75rem;color:#3b82f6;text-decoration:underline;">View DTI Permit</a></div>' : '<div style="font-size:0.7rem;color:#ef4444;margin-bottom:0.4rem;">No DTI Permit uploaded</div>')
+      : '<div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.4rem;">Verify ID: <strong>' + escapeHtml(u.student_faculty_id) + '</strong></div>';
+    return '<div style="padding:0.6rem;border-radius:8px;background:#f9fafb;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">' +
+        '<div style="display:flex;align-items:center;gap:0.5rem;min-width:0;">' +
+          '<div class="user-avatar-sm" style="width:28px;height:28px;font-size:0.65rem;background:#fef3c7;color:#92400e;">' + (u.full_name ? u.full_name.charAt(0).toUpperCase() : '?') + '</div>' +
+          '<div style="min-width:0;"><strong style="font-size:0.8rem;">' + escapeHtml(u.full_name) + '</strong><span class="text-muted small d-block" style="font-size:0.7rem;">' + escapeHtml(u.email) + '</span><span class="text-muted small d-block" style="font-size:0.7rem;">' + extraInfo + '</span></div>' +
+        '</div>' +
+        '<div style="text-align:right;"><span class="badge-status" style="background:' + typeBadge + ';color:#fff;font-size:0.6rem;">' + typeLabel + '</span><span class="badge-status" style="background:#f59e0b;color:#fff;font-size:0.6rem;margin-left:0.25rem;">Pending</span></div>' +
       '</div>' +
-      '<span class="badge-status" style="background:#f59e0b;color:#fff;font-size:0.6rem;">Pending</span>' +
-    '</div>'
-  ).join('');
+      docSection +
+      '<div style="display:flex;gap:0.35rem;">' +
+        '<button class="btn btn-sm" style="flex:1;background:#16a34a;color:#fff;border-radius:8px;font-weight:600;font-size:0.72rem;padding:0.3rem 0.5rem;border:none;" onclick="approveUser(\'' + u.user_id + '\')">Approve</button>' +
+        '<button class="btn btn-sm" style="flex:1;background:#ef4444;color:#fff;border-radius:8px;font-weight:600;font-size:0.72rem;padding:0.3rem 0.5rem;border:none;" onclick="rejectUser(\'' + u.user_id + '\')">Reject</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 }
 
 function renderTopSelling() {
@@ -434,6 +448,25 @@ document.addEventListener('DOMContentLoaded', function () {
       await loadStats();
     }
   });
+
+  window.approveUser = async function(userId) {
+    const result = await apiPost('/api/kaon-admin/users/' + userId + '/approve/', {});
+    if (result) {
+      showAlert(result.message || 'User approved!', 'success');
+      await loadUsers();
+      await loadStats();
+    }
+  };
+
+  window.rejectUser = async function(userId) {
+    if (!confirm('Reject and delete this user? This cannot be undone.')) return;
+    const result = await apiPost('/api/kaon-admin/users/' + userId + '/reject/', {});
+    if (result) {
+      showAlert(result.message || 'User rejected.', 'info');
+      await loadUsers();
+      await loadStats();
+    }
+  };
 });
 </script>
 {% endblock %}

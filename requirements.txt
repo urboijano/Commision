@@ -5,3 +5,4 @@ django-cors-headers==4.9.0
 channels==4.2.0
 asgiref==3.8.1
 PyJWT==2.13.0
+Pillow==12.2.0
