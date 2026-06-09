@@ -80,11 +80,20 @@ class MenuItem(models.Model):
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     image_url = models.URLField(max_length=500, blank=True)
     is_available = models.BooleanField(default=True)
+    stock = models.IntegerField(default=0)
+    store_owner = models.ForeignKey(
+        'User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='menu_items', limit_choices_to={'user_type': 'store_owner'}
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "Menu Item"
         verbose_name_plural = "Menu Items"
+
+    def save(self, *args, **kwargs):
+        self.is_available = self.stock > 0
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

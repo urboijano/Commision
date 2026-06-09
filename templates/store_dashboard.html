@@ -4,85 +4,164 @@
 <style>
   .navbar { display: none !important; }
   body > .container, body .py-4 { max-width: none; padding: 0 !important; }
-  .dash-tab { cursor: pointer; padding: 0.75rem 1.25rem; border-radius: 12px; font-weight: 600; transition: all 0.2s; }
-  .dash-tab:hover { background: #f3f4f6; }
-  .dash-tab.active { background: #1a1a1a; color: #fff; }
-  .dash-content { display: none; }
-  .dash-content.active { display: block; }
+  .store-layout { display: flex; min-height: 100vh; }
+  .store-sidebar {
+    width: 240px; flex-shrink: 0; background: #1a1a1a; padding: 1.5rem 1rem;
+    display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh;
+  }
+  .store-sidebar-brand {
+    font-size: 1.2rem; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 0.4rem;
+    padding-bottom: 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 1rem;
+  }
+  .store-sidebar-brand svg { width: 18px; height: 18px; color: #ccff00; }
+  .store-nav-item {
+    display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.85rem; margin-bottom: 0.35rem;
+    border-radius: 10px; color: rgba(255,255,255,0.6); font-size: 0.85rem; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; text-decoration: none; border: none; background: none; width: 100%; text-align: left;
+  }
+  .store-nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+  .store-nav-item.active { background: #ccff00; color: #1a1a1a; font-weight: 700; }
+  .store-nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .store-sidebar-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08); }
+  .store-main { flex: 1; background: #f5f5f5; padding: 1.5rem 2rem; min-width: 0; }
+  .store-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;
+  }
+  .store-header h4 { font-size: 1.25rem; font-weight: 800; margin: 0; color: #1a1a1a; }
+  .store-header-right { display: flex; align-items: center; gap: 0.75rem; }
+  .store-avatar {
+    width: 38px; height: 38px; border-radius: 50%; background: #f97316;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; color: #fff;
+  }
+  .card { background: #fff; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; margin-bottom: 1rem; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid #f0f0f0; }
+  .card-header h5 { font-size: 0.9rem; font-weight: 700; margin: 0; }
+  .card-body { padding: 1.25rem; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .stat-box {
+    background: #fff; border-radius: 14px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    display: flex; align-items: center; gap: 1rem;
+  }
+  .stat-box-icon {
+    width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center;
+    justify-content: center; font-size: 1.3rem; flex-shrink: 0;
+  }
+  .stat-box-body h6 { font-size: 0.72rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.1rem; }
+  .stat-box-body strong { font-size: 1.5rem; font-weight: 800; color: #1a1a1a; }
+  .order-card {
+    padding: 1rem 1.25rem; background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap;
+  }
+  .order-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .menu-item {
+    padding: 0.75rem 1rem; background: #fff; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;
+  }
+  .menu-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .dash-tab-content { display: none; }
+  .dash-tab-content.active { display: block; }
 </style>
-<div class="landing-bg">
-  <div class="landing-grid">
-    <div class="landing-main">
-      <div class="main-container">
-        <div class="main-header">
-          <div class="brand-mark">KaonISU <i data-lucide="utensils-crossed" class="brand-icon"></i></div>
-          <div class="welcome-actions">
-            <span style="font-size: 0.85rem; font-weight: 600; color: #4b5563;">
-              <i data-lucide="store" style="width: 16px; height: 16px;"></i>
-              {{ user.store_name }}
-            </span>
-            <button class="icon-btn" onclick="location.href='/'">
-              <i data-lucide="home"></i>
-            </button>
-            <button class="icon-btn" id="logoutBtn">
-              <i data-lucide="log-out"></i>
-            </button>
-          </div>
-        </div>
 
-        <div class="main-body">
-          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
-            <div class="dash-tab active" data-tab="orders">
-              <i data-lucide="clipboard-list" style="width: 16px; height: 16px;"></i> Orders
-            </div>
-            <div class="dash-tab" data-tab="menu">
-              <i data-lucide="utensils" style="width: 16px; height: 16px;"></i> Menu
-            </div>
-          </div>
+<div class="store-layout">
+  <div class="store-sidebar">
+    <div class="store-sidebar-brand">
+      <i data-lucide="utensils-crossed"></i> KaonISU
+    </div>
+    <button class="store-nav-item active" data-tab="overview">
+      <i data-lucide="layout-dashboard"></i> Overview
+    </button>
+    <button class="store-nav-item" data-tab="orders">
+      <i data-lucide="clipboard-list"></i> Orders
+    </button>
+    <button class="store-nav-item" data-tab="menu">
+      <i data-lucide="utensils"></i> Menu
+    </button>
+    <div class="store-sidebar-footer">
+      <button class="store-nav-item" id="sidebarLogoutBtn">
+        <i data-lucide="log-out"></i> Sign Out
+      </button>
+    </div>
+  </div>
 
-          <div id="tabOrders" class="dash-content active">
-            <div class="section-header" style="margin-bottom: 1rem;">
-              <h5>Incoming Orders</h5>
-              <span id="orderCount" class="badge" style="background: #ccff00; color: #1a1a1a;">0</span>
-            </div>
-            <div id="ordersList" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
-          </div>
-
-          <div id="tabMenu" class="dash-content">
-            <div class="section-header" style="margin-bottom: 1rem;">
-              <h5>Menu Items</h5>
-              <button class="btn btn-sm" style="background: #ccff00; color: #1a1a1a; font-weight: 700; border-radius: 10px;" data-bs-toggle="modal" data-bs-target="#menuModal">
-                <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Add Item
-              </button>
-            </div>
-            <div id="menuList" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
-          </div>
-        </div>
+  <div class="store-main">
+    <div class="store-header">
+      <div>
+        <h4 id="pageTitle">Overview</h4>
+        <p class="text-muted small mb-0" id="pageSubtitle">Store performance summary</p>
+      </div>
+      <div class="store-header-right">
+        <span style="font-size:0.85rem;font-weight:600;color:#4b5563;">
+          <i data-lucide="store" style="width:16px;height:16px;vertical-align:text-bottom;"></i>
+          {{ user.store_name }}
+        </span>
+        <div class="store-avatar">{{ user.store_name|first }}</div>
       </div>
     </div>
 
-    <div class="landing-sidebar">
-      <div class="sidebar-card">
-        <div class="auth-sidebar-header">
-          <i data-lucide="store"></i>
-          <span>{{ user.store_name }}</span>
-        </div>
-        <p class="text-muted small">{{ user.full_name }}</p>
-        <div style="display: flex; gap: 0.5rem;">
-          <div class="quick-card-icon" style="width: 100%; height: auto; padding: 0.75rem; border-radius: 10px; flex-direction: column; gap: 0.25rem;">
-            <strong id="statOrders" style="font-size: 1.2rem;">0</strong>
-            <span class="text-muted small">Orders</span>
+    <div id="tabOverview" class="dash-tab-content active">
+      <div class="stat-grid" style="margin-bottom:0;">
+        <div class="stat-box">
+          <div class="stat-box-icon" style="background:#fef3c7;color:#f59e0b;"><i data-lucide="clipboard-list"></i></div>
+          <div class="stat-box-body">
+            <h6>Orders</h6>
+            <strong id="statOrders">0</strong>
           </div>
-          <div class="quick-card-icon" style="width: 100%; height: auto; padding: 0.75rem; border-radius: 10px; flex-direction: column; gap: 0.25rem;">
-            <strong id="statMenu" style="font-size: 1.2rem;">0</strong>
-            <span class="text-muted small">Menu Items</span>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-icon" style="background:#dcfce7;color:#16a34a;"><i data-lucide="utensils"></i></div>
+          <div class="stat-box-body">
+            <h6>Menu Items</h6>
+            <strong id="statMenu">0</strong>
+          </div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-icon" style="background:#e0e7ff;color:#4f46e5;"><i data-lucide="trending-up"></i></div>
+          <div class="stat-box-body">
+            <h6>Revenue</h6>
+            <strong id="statRevenue">₱0.00</strong>
           </div>
         </div>
       </div>
-      <div class="sidebar-card promo-sidebar" style="flex: 1;">
-        <div class="promo-sidebar-badge">KaonISU</div>
-        <h5>Store Dashboard</h5>
-        <p>Manage your menu items and incoming orders from here.</p>
+
+      <div class="card" style="margin-top:1rem;">
+        <div class="card-header">
+          <h5>Incoming Orders</h5>
+        </div>
+        <div class="card-body" id="overviewOrdersList" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+      </div>
+    </div>
+
+    <div id="tabOrders" class="dash-tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h5>All Orders</h5>
+          <span id="orderCount" class="badge" style="background:#ccff00;color:#1a1a1a;">0</span>
+        </div>
+        <div class="card-body" id="ordersList" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+      </div>
+    </div>
+
+    <div id="tabMenu" class="dash-tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h5>Menu Items</h5>
+          <button class="btn btn-sm" style="background:#ccff00;color:#1a1a1a;font-weight:700;border-radius:10px;" data-bs-toggle="modal" data-bs-target="#menuModal">
+            <i data-lucide="plus" style="width:16px;height:16px;"></i> Add Item
+          </button>
+        </div>
+        <div style="padding:0.75rem 1.25rem;border-bottom:1px solid #f0f0f0;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+          <button class="menu-filter-btn active" data-filter="" style="padding:0.3rem 0.75rem;border-radius:2rem;border:1px solid #e5e7eb;background:#ccff00;color:#1a1a1a;font-size:0.75rem;font-weight:600;cursor:pointer;transition:all 0.2s;">All</button>
+          <button class="menu-filter-btn" data-filter="rice" style="padding:0.3rem 0.75rem;border-radius:2rem;border:1px solid #e5e7eb;background:#fff;color:#6b7280;font-size:0.75rem;font-weight:600;cursor:pointer;transition:all 0.2s;">Rice Meals</button>
+          <button class="menu-filter-btn" data-filter="noodles" style="padding:0.3rem 0.75rem;border-radius:2rem;border:1px solid #e5e7eb;background:#fff;color:#6b7280;font-size:0.75rem;font-weight:600;cursor:pointer;transition:all 0.2s;">Noodles</button>
+          <button class="menu-filter-btn" data-filter="drinks" style="padding:0.3rem 0.75rem;border-radius:2rem;border:1px solid #e5e7eb;background:#fff;color:#6b7280;font-size:0.75rem;font-weight:600;cursor:pointer;transition:all 0.2s;">Drinks</button>
+          <button class="menu-filter-btn" data-filter="snacks" style="padding:0.3rem 0.75rem;border-radius:2rem;border:1px solid #e5e7eb;background:#fff;color:#6b7280;font-size:0.75rem;font-weight:600;cursor:pointer;transition:all 0.2s;">Snacks</button>
+          <button class="menu-filter-btn" data-filter="desserts" style="padding:0.3rem 0.75rem;border-radius:2rem;border:1px solid #e5e7eb;background:#fff;color:#6b7280;font-size:0.75rem;font-weight:600;cursor:pointer;transition:all 0.2s;">Desserts</button>
+          <div style="flex:1;min-width:140px;max-width:240px;margin-left:auto;position:relative;">
+            <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#9ca3af;pointer-events:none;"></i>
+            <input type="text" id="menuSearch" placeholder="Search menu..." style="width:100%;padding:0.35rem 0.7rem 0.35rem 1.7rem;border-radius:2rem;border:1px solid #e5e7eb;font-size:0.75rem;outline:none;background:#f9fafb;">
+          </div>
+        </div>
+        <div class="card-body" id="menuList" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
       </div>
     </div>
   </div>
@@ -90,27 +169,27 @@
 
 <div class="modal fade" id="menuModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.12);">
-      <div class="modal-body" style="padding: 1.5rem;">
-        <h5 style="font-weight: 700; margin-bottom: 1rem;" id="menuModalTitle">Add Menu Item</h5>
+    <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.12);">
+      <div class="modal-body" style="padding:1.5rem;">
+        <h5 style="font-weight:700;margin-bottom:1rem;" id="menuModalTitle">Add Menu Item</h5>
         <form id="menuForm">
           <input type="hidden" id="editItemId">
-          <div class="auth-field">
-            <label class="auth-field-label">Name</label>
-            <input type="text" class="auth-input" id="itemName" required style="padding: 0.75rem 1rem;">
-          </div>
-          <div class="auth-field">
-            <label class="auth-field-label">Description</label>
-            <textarea class="auth-input" id="itemDesc" rows="2" style="padding: 0.75rem 1rem; resize: none;"></textarea>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+            <div class="auth-field" style="grid-column:1 / -1;">
+              <label class="auth-field-label">Name</label>
+              <input type="text" class="auth-input" id="itemName" required style="padding:0.75rem 1rem;">
+            </div>
+            <div class="auth-field" style="grid-column:1 / -1;">
+              <label class="auth-field-label">Description</label>
+              <textarea class="auth-input" id="itemDesc" rows="2" style="padding:0.75rem 1rem;resize:none;"></textarea>
+            </div>
             <div class="auth-field">
               <label class="auth-field-label">Price (₱)</label>
-              <input type="number" class="auth-input" id="itemPrice" required min="0" step="0.01" style="padding: 0.75rem 1rem;">
+              <input type="number" class="auth-input" id="itemPrice" required min="0" step="0.01" style="padding:0.75rem 1rem;">
             </div>
             <div class="auth-field">
               <label class="auth-field-label">Category</label>
-              <select class="auth-input" id="itemCategory" required style="padding: 0.75rem 1rem; appearance: auto;">
+              <select class="auth-input" id="itemCategory" required style="padding:0.75rem 1rem;appearance:auto;">
                 <option value="rice">Rice Meals</option>
                 <option value="noodles">Noodles</option>
                 <option value="drinks">Drinks</option>
@@ -118,16 +197,16 @@
                 <option value="desserts">Desserts</option>
               </select>
             </div>
+            <div class="auth-field">
+              <label class="auth-field-label">Stock</label>
+              <input type="number" class="auth-input" id="itemStock" required min="0" step="1" style="padding:0.75rem 1rem;">
+            </div>
+            <div class="auth-field">
+              <label class="auth-field-label">Image URL</label>
+              <input type="url" class="auth-input" id="itemImage" style="padding:0.75rem 1rem;">
+            </div>
           </div>
-          <div class="auth-field">
-            <label class="auth-field-label">Image URL</label>
-            <input type="url" class="auth-input" id="itemImage" style="padding: 0.75rem 1rem;">
-          </div>
-          <div class="form-check mb-3">
-            <input type="checkbox" class="form-check-input" id="itemAvailable" checked>
-            <label class="form-check-label" for="itemAvailable" style="font-size: 0.9rem;">Available</label>
-          </div>
-          <button type="submit" class="order-btn" id="menuSubmitBtn" style="border-radius: 12px; padding: 0.75rem; font-size: 0.95rem;">
+          <button type="submit" class="order-btn" id="menuSubmitBtn" style="border-radius:12px;padding:0.75rem;font-size:0.95rem;margin-top:0.5rem;">
             Save Item
           </button>
         </form>
@@ -138,15 +217,15 @@
 
 <div class="modal fade" id="deleteModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-sm">
-    <div class="modal-content" style="border-radius: 16px; border: none;">
-      <div class="modal-body text-center" style="padding: 2rem;">
-        <i data-lucide="alert-triangle" style="width: 40px; height: 40px; color: #ef4444; margin-bottom: 1rem;"></i>
-        <h6 style="font-weight: 700;">Delete this item?</h6>
+    <div class="modal-content" style="border-radius:16px;border:none;">
+      <div class="modal-body text-center" style="padding:2rem;">
+        <i data-lucide="alert-triangle" style="width:40px;height:40px;color:#ef4444;margin-bottom:1rem;"></i>
+        <h6 style="font-weight:700;">Delete this item?</h6>
         <p class="text-muted small">This action cannot be undone.</p>
         <input type="hidden" id="deleteItemId">
-        <div style="display: flex; gap: 0.5rem; justify-content: center;">
-          <button class="btn btn-sm" style="background: #f3f4f6; border-radius: 10px; font-weight: 600; padding: 0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-sm" style="background: #ef4444; color: #fff; border-radius: 10px; font-weight: 600; padding: 0.5rem 1.5rem;" id="confirmDelete">Delete</button>
+        <div style="display:flex;gap:0.5rem;justify-content:center;">
+          <button class="btn btn-sm" style="background:#f3f4f6;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-sm" style="background:#ef4444;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" id="confirmDelete">Delete</button>
         </div>
       </div>
     </div>
@@ -159,70 +238,161 @@ lucide.createIcons();
 
 let currentOrders = [];
 let currentMenu = [];
+let menuCategoryFilter = '';
+let menuSearchQuery = '';
+
+const pageMeta = {
+  overview: ['Overview', 'Store performance summary'],
+  orders: ['Orders', 'View all store orders'],
+  menu: ['Menu', 'Manage your menu items'],
+};
 
 function renderOrders() {
   const container = document.getElementById('ordersList');
-  if (!currentOrders.length) {
-    container.innerHTML = '<div class="text-muted small text-center py-4">No orders yet.</div>';
+  const all = currentOrders.filter(o => o.status !== 'cancelled');
+  if (!all.length) {
+    container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="inbox" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">No orders yet.</p></div>';
     document.getElementById('orderCount').textContent = '0';
     document.getElementById('statOrders').textContent = '0';
+    renderOverview();
     return;
   }
-  container.innerHTML = currentOrders.map(order => {
-    const items = order.items.map(i => `${i.item_name} x${i.quantity}`).join(', ');
-    return `
-      <div class="sidebar-card" style="padding: 1rem;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap;">
-          <div>
-            <strong style="font-size: 0.9rem;">${order.order_number}</strong>
-            <span class="text-muted small" style="display: block;">${order.user?.full_name || 'Unknown'}</span>
-            <span class="text-muted small">${items}</span>
-            <div style="margin-top: 0.25rem;"><strong style="font-size: 0.95rem;">₱${parseFloat(order.total_amount).toFixed(2)}</strong></div>
-          </div>
-          <div style="text-align: right;">
-            <span class="badge" style="background: ${order.status === 'received' ? '#f59e0b' : order.status === 'preparing' ? '#3b82f6' : order.status === 'ready_for_pickup' ? '#10b981' : '#6b7280'}; color: #fff; border-radius: 2rem; padding: 0.35rem 0.75rem; font-size: 0.75rem;">
-              ${order.status_display || order.status}
-            </span>
-            ${order.status === 'received' ? `<button class="btn btn-sm mt-1" style="background: #ccff00; color: #1a1a1a; border-radius: 2rem; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.75rem;" onclick="updateOrderStatus('${order.order_id}', 'preparing')">Accept</button>` : ''}
-            ${order.status === 'preparing' ? `<button class="btn btn-sm mt-1" style="background: #ccff00; color: #1a1a1a; border-radius: 2rem; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.75rem;" onclick="updateOrderStatus('${order.order_id}', 'ready_for_pickup')">Ready</button>` : ''}
-          </div>
-        </div>
-      </div>
-    `;
+  container.innerHTML = all.map(order => {
+    const items = order.items.map(i => i.item_name + ' x' + i.quantity).join(', ');
+    const statusMeta = {
+      received: { color: '#f59e0b', bg: '#fef3c7', label: 'Received' },
+      preparing: { color: '#3b82f6', bg: '#eff6ff', label: 'Preparing' },
+      ready_for_pickup: { color: '#10b981', bg: '#ecfdf5', label: 'Ready for Pickup' },
+      completed: { color: '#6b7280', bg: '#f3f4f6', label: 'Completed' },
+    };
+    const s = statusMeta[order.status] || { color: '#6b7280', bg: '#f3f4f6', label: order.status_display || order.status };
+    return '<div style="background:#fff;border-radius:12px;padding:1rem 1.25rem;box-shadow:0 1px 2px rgba(0,0,0,0.04);">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;">' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">' +
+            '<strong style="font-size:0.9rem;">#' + order.order_number + '</strong>' +
+            '<span style="font-size:0.68rem;font-weight:600;color:' + s.color + ';background:' + s.bg + ';padding:0.15rem 0.55rem;border-radius:2rem;">' + s.label + '</span>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:0.35rem;font-size:0.82rem;color:#4b5563;margin-bottom:0.2rem;">' +
+            '<i data-lucide="user" style="width:13px;height:13px;"></i>' +
+            '<span>' + (order.user?.full_name || 'Unknown') + '</span>' +
+          '</div>' +
+          '<div style="font-size:0.8rem;color:#6b7280;margin-bottom:0.3rem;">' +
+            '<i data-lucide="shopping-bag" style="width:12px;height:12px;vertical-align:text-bottom;"></i> ' + items +
+          '</div>' +
+          '<strong style="font-size:1rem;color:#1a1a1a;">₱' + parseFloat(order.total_amount).toFixed(2) + '</strong>' +
+        '</div>' +
+        '<div style="flex-shrink:0;display:flex;flex-direction:column;gap:0.35rem;">' +
+          (order.status === 'received'
+            ? '<button class="btn btn-sm" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'preparing\')"><i data-lucide="check" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Accept</button>'
+            : '') +
+          (order.status === 'preparing'
+            ? '<button class="btn btn-sm" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'ready_for_pickup\')"><i data-lucide="check" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Ready</button>'
+            : '') +
+        '</div>' +
+      '</div>' +
+    '</div>';
   }).join('');
-  document.getElementById('orderCount').textContent = currentOrders.length;
-  document.getElementById('statOrders').textContent = currentOrders.length;
+  document.getElementById('orderCount').textContent = all.length;
+  document.getElementById('statOrders').textContent = all.length;
+  renderOverview();
+  lucide.createIcons();
+}
+
+function renderOverview() {
+  const container = document.getElementById('overviewOrdersList');
+  const incoming = currentOrders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
+  if (!incoming.length) {
+    container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="inbox" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">No incoming orders.</p></div>';
+    document.getElementById('statRevenue').textContent = '₱' +
+      currentOrders
+        .filter(o => o.status === 'completed')
+        .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0)
+        .toFixed(2);
+    return;
+  }
+  document.getElementById('statRevenue').textContent = '₱' +
+    currentOrders
+      .filter(o => o.status === 'completed')
+      .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0)
+      .toFixed(2);
+  const recent = incoming.slice(0, 5);
+  const statusMeta = {
+    received: { color: '#f59e0b', bg: '#fef3c7', label: 'Received' },
+    preparing: { color: '#3b82f6', bg: '#eff6ff', label: 'Preparing' },
+    ready_for_pickup: { color: '#10b981', bg: '#ecfdf5', label: 'Ready for Pickup' },
+  };
+  container.innerHTML = recent.map(order => {
+    const items = order.items.map(i => i.item_name + ' x' + i.quantity).join(', ');
+    const s = statusMeta[order.status] || { color: '#6b7280', bg: '#f3f4f6', label: order.status_display || order.status };
+    return '<div style="background:#fff;border-radius:12px;padding:0.85rem 1.1rem;box-shadow:0 1px 2px rgba(0,0,0,0.04);display:flex;justify-content:space-between;align-items:center;gap:0.75rem;">' +
+      '<div style="min-width:0;">' +
+        '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.2rem;">' +
+          '<strong style="font-size:0.85rem;">#' + order.order_number + '</strong>' +
+          '<span style="font-size:0.65rem;font-weight:600;color:' + s.color + ';background:' + s.bg + ';padding:0.15rem 0.5rem;border-radius:2rem;">' + s.label + '</span>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:0.3rem;font-size:0.78rem;color:#4b5563;margin-bottom:0.15rem;">' +
+          '<i data-lucide="user" style="width:12px;height:12px;"></i>' +
+          '<span>' + (order.user?.full_name || 'Unknown') + '</span>' +
+        '</div>' +
+        '<span style="font-size:0.75rem;color:#6b7280;">' + items + '</span>' +
+      '</div>' +
+      '<div style="flex-shrink:0;text-align:right;">' +
+        '<strong style="font-size:0.9rem;display:block;">₱' + parseFloat(order.total_amount).toFixed(2) + '</strong>' +
+        (order.status === 'received'
+          ? '<button class="btn btn-sm mt-1" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'preparing\')"><i data-lucide="check" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Accept</button>'
+          : '') +
+        (order.status === 'preparing'
+          ? '<button class="btn btn-sm mt-1" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'ready_for_pickup\')"><i data-lucide="check" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Ready</button>'
+          : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
 }
 
 function renderMenu() {
   const container = document.getElementById('menuList');
-  if (!currentMenu.length) {
-    container.innerHTML = '<div class="text-muted small text-center py-4">No menu items yet.</div>';
-    document.getElementById('statMenu').textContent = '0';
+  const q = menuSearchQuery.toLowerCase();
+  const filtered = currentMenu.filter(item => {
+    if (menuCategoryFilter && item.category !== menuCategoryFilter) return false;
+    if (!q) return true;
+    return (item.name && item.name.toLowerCase().includes(q)) ||
+           (item.description && item.description.toLowerCase().includes(q));
+  });
+  if (!filtered.length) {
+    container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="inbox" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">' + (currentMenu.length ? 'No menu items match your search.' : 'No menu items yet.') + '</p></div>';
+    document.getElementById('statMenu').textContent = currentMenu.length;
     return;
   }
-  container.innerHTML = currentMenu.map(item => `
-    <div class="sidebar-card" style="padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
-      <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 0;">
-        <div class="quick-card-icon" style="width: 40px; height: 40px; border-radius: 10px; font-size: 0.8rem; flex-shrink: 0;">
-          <i data-lucide="${item.category === 'rice' ? 'wheat' : item.category === 'noodles' ? 'utensils-crossed' : item.category === 'drinks' ? 'cup-soda' : item.category === 'snacks' ? 'popcorn' : 'cake-slice'}" style="width: 18px; height: 18px;"></i>
-        </div>
-        <div style="min-width: 0;">
-          <strong style="font-size: 0.85rem;">${item.name}</strong>
-          <span class="text-muted small" style="display: block;">₱${parseFloat(item.price).toFixed(2)}</span>
-        </div>
-      </div>
-      <div style="display: flex; gap: 0.35rem; flex-shrink: 0;">
-        ${item.is_available ? '' : '<span class="badge bg-secondary" style="font-size: 0.65rem;">Unavailable</span>'}
-        <button class="icon-btn" style="width: 32px; height: 32px; font-size: 0.9rem;" onclick="editMenuItem(${item.item_id})">
-          <i data-lucide="pencil" style="width: 14px; height: 14px;"></i>
-        </button>
-        <button class="icon-btn" style="width: 32px; height: 32px; font-size: 0.9rem; color: #ef4444;" onclick="confirmDelete(${item.item_id})">
-          <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-        </button>
-      </div>
-    </div>
-  `).join('');
+  const categoryIcons = { rice: 'wheat', noodles: 'utensils-crossed', drinks: 'cup-soda', snacks: 'popcorn', desserts: 'cake-slice' };
+  const categoryLabels = { rice: 'Rice Meals', noodles: 'Noodles', drinks: 'Drinks', snacks: 'Snacks', desserts: 'Desserts' };
+  container.innerHTML = filtered.map(item =>
+    '<div style="background:#fff;border-radius:12px;padding:0.85rem 1.1rem;box-shadow:0 1px 2px rgba(0,0,0,0.04);display:flex;justify-content:space-between;align-items:center;gap:0.75rem;">' +
+      '<div style="display:flex;align-items:center;gap:0.75rem;min-width:0;flex:1;">' +
+        (item.image_url
+          ? '<img src="' + item.image_url + '" alt="" style="width:42px;height:42px;border-radius:10px;object-fit:cover;flex-shrink:0;" onerror="this.style.display=\'none\'">'
+          : '<div style="width:42px;height:42px;border-radius:10px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i data-lucide="' + (categoryIcons[item.category] || 'utensils') + '" style="width:18px;height:18px;color:#f97316;"></i></div>') +
+        '<div style="min-width:0;">' +
+          '<div style="display:flex;align-items:center;gap:0.5rem;">' +
+            '<strong style="font-size:0.88rem;">' + item.name + '</strong>' +
+            '<span style="font-size:0.68rem;color:#9ca3af;background:#f3f4f6;padding:0.1rem 0.5rem;border-radius:2rem;">' + (categoryLabels[item.category] || item.category) + '</span>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:0.75rem;">' +
+            '<strong style="font-size:1rem;color:#1a1a1a;">₱' + parseFloat(item.price).toFixed(2) + '</strong>' +
+            '<span style="font-size:0.72rem;color:' + (item.stock > 0 ? '#16a34a' : '#ef4444') + ';font-weight:600;background:' + (item.stock > 0 ? '#f0fdf4' : '#fef2f2') + ';padding:0.15rem 0.5rem;border-radius:2rem;">' + (item.stock > 0 ? 'Stock: ' + item.stock : 'Out of Stock') + '</span>' +
+          '</div>' +
+          (item.description ? '<span class="text-muted small" style="display:block;font-size:0.75rem;">' + item.description + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:0.4rem;flex-shrink:0;align-items:center;">' +
+        (item.is_available ? '<span style="width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block;"></span>' : '<span style="width:8px;height:8px;border-radius:50%;background:#d1d5db;display:inline-block;"></span>') +
+        '<span style="font-size:0.72rem;color:' + (item.is_available ? '#16a34a' : '#9ca3af') + ';font-weight:600;">' + (item.is_available ? 'Available' : 'Unavailable') + '</span>' +
+        '<div style="width:1px;height:20px;background:#e5e7eb;margin:0 0.25rem;"></div>' +
+        '<button class="icon-btn" style="width:30px;height:30px;" onclick="editMenuItem(' + item.item_id + ')"><i data-lucide="pencil" style="width:13px;height:13px;"></i></button>' +
+        '<button class="icon-btn" style="width:30px;height:30px;color:#ef4444;" onclick="confirmDelete(' + item.item_id + ')"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>' +
+      '</div>' +
+    '</div>'
+  ).join('');
   document.getElementById('statMenu').textContent = currentMenu.length;
   lucide.createIcons();
 }
@@ -240,7 +410,7 @@ async function loadMenu() {
 }
 
 async function updateOrderStatus(orderId, status) {
-  const result = await apiPost(`/api/store/orders/${orderId}/status/`, { status });
+  const result = await apiPost('/api/store/orders/' + orderId + '/status/', { status });
   if (result) await loadOrders();
 }
 
@@ -252,10 +422,10 @@ async function saveMenuItem(formData) {
     price: parseFloat(formData.price),
     category: formData.category,
     image_url: formData.image_url,
-    is_available: formData.is_available,
+    stock: parseInt(formData.stock) || 0,
   };
   const result = editId
-    ? await apiPatch(`/api/store/menu/${editId}/`, body)
+    ? await apiPatch('/api/store/menu/' + editId + '/', body)
     : await apiPost('/api/store/menu/create/', body);
   if (result) {
     bootstrap.Modal.getInstance(document.getElementById('menuModal')).hide();
@@ -273,7 +443,7 @@ function editMenuItem(itemId) {
   document.getElementById('itemPrice').value = item.price;
   document.getElementById('itemCategory').value = item.category;
   document.getElementById('itemImage').value = item.image_url;
-  document.getElementById('itemAvailable').checked = item.is_available;
+  document.getElementById('itemStock').value = item.stock || 0;
   document.getElementById('menuSubmitBtn').textContent = 'Update Item';
   new bootstrap.Modal(document.getElementById('menuModal')).show();
 }
@@ -287,12 +457,34 @@ document.addEventListener('DOMContentLoaded', function () {
   loadOrders();
   loadMenu();
 
-  document.querySelectorAll('.dash-tab').forEach(tab => {
-    tab.addEventListener('click', function () {
-      document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.dash-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.menu-filter-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.menu-filter-btn').forEach(b => {
+        b.style.background = '#fff';
+        b.style.color = '#6b7280';
+      });
+      this.style.background = '#ccff00';
+      this.style.color = '#1a1a1a';
+      menuCategoryFilter = this.dataset.filter;
+      renderMenu();
+    });
+  });
+
+  document.getElementById('menuSearch')?.addEventListener('input', function () {
+    menuSearchQuery = this.value;
+    renderMenu();
+  });
+
+  document.querySelectorAll('.store-nav-item[data-tab]').forEach(item => {
+    item.addEventListener('click', function () {
+      document.querySelectorAll('.store-nav-item[data-tab]').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.dash-tab-content').forEach(c => c.classList.remove('active'));
       this.classList.add('active');
-      document.getElementById('tab' + this.dataset.tab.charAt(0).toUpperCase() + this.dataset.tab.slice(1)).classList.add('active');
+      const tab = this.dataset.tab;
+      document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+      const meta = pageMeta[tab] || ['', ''];
+      document.getElementById('pageTitle').textContent = meta[0];
+      document.getElementById('pageSubtitle').textContent = meta[1];
     });
   });
 
@@ -306,7 +498,7 @@ document.addEventListener('DOMContentLoaded', function () {
       price: document.getElementById('itemPrice').value,
       category: document.getElementById('itemCategory').value,
       image_url: document.getElementById('itemImage').value,
-      is_available: document.getElementById('itemAvailable').checked,
+      stock: document.getElementById('itemStock').value,
     });
     btn.disabled = false;
   });
@@ -316,15 +508,22 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('editItemId').value = '';
     document.getElementById('menuModalTitle').textContent = 'Add Menu Item';
     document.getElementById('menuSubmitBtn').textContent = 'Save Item';
+    document.getElementById('itemStock').value = '';
   });
 
   document.getElementById('confirmDelete').addEventListener('click', async function () {
     const itemId = document.getElementById('deleteItemId').value;
-    const result = await apiDelete(`/api/store/menu/${itemId}/delete/`);
+    const result = await apiDelete('/api/store/menu/' + itemId + '/delete/');
     if (result) {
       bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
       await loadMenu();
     }
+  });
+
+  document.getElementById('sidebarLogoutBtn').addEventListener('click', async function () {
+    await apiPost('/api/auth/logout/', {});
+    clearTokens();
+    window.location.href = '/';
   });
 });
 </script>

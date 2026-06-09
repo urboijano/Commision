@@ -110,7 +110,12 @@ class MenuItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MenuItem
-        fields = ['item_id', 'name', 'description', 'price', 'category', 'category_display', 'image_url', 'is_available']
+        fields = ['item_id', 'name', 'description', 'price', 'category', 'category_display', 'image_url', 'is_available', 'stock']
+
+    def validate(self, data):
+        if 'stock' in data:
+            data['is_available'] = data['stock'] > 0
+        return data
 
     def get_category_display(self, obj):
         return obj.get_category_display()
@@ -198,10 +203,12 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class FeedbackSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.full_name', read_only=True)
+
     class Meta:
         model = Feedback
-        fields = ['feedback_id', 'order', 'rating', 'satisfaction_level', 'comments', 'created_at']
-        read_only_fields = ['feedback_id', 'created_at']
+        fields = ['feedback_id', 'order', 'user_name', 'rating', 'satisfaction_level', 'comments', 'created_at']
+        read_only_fields = ['feedback_id', 'created_at', 'user_name']
 
     def validate_rating(self, value):
         if value < 1 or value > 5:
@@ -216,3 +223,37 @@ class CreateFeedbackSerializer(serializers.Serializer):
         'very_satisfied', 'satisfied', 'neutral', 'dissatisfied', 'very_dissatisfied'
     ])
     comments = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+
+class MenuItemDetailSerializer(serializers.ModelSerializer):
+    category_display = serializers.SerializerMethodField()
+    store_owner_name = serializers.SerializerMethodField()
+    store_name = serializers.SerializerMethodField()
+    feedbacks = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MenuItem
+        fields = [
+            'item_id', 'name', 'description', 'price', 'category', 'category_display',
+            'image_url', 'is_available', 'stock', 'store_owner_name', 'store_name', 'feedbacks'
+        ]
+
+    def get_category_display(self, obj):
+        return obj.get_category_display()
+
+    def get_store_owner_name(self, obj):
+        if obj.store_owner:
+            return obj.store_owner.full_name
+        return None
+
+    def get_store_name(self, obj):
+        if obj.store_owner:
+            return obj.store_owner.store_name
+        return None
+
+    def get_feedbacks(self, obj):
+        from django.db.models import Prefetch
+        order_items = OrderItem.objects.filter(item=obj).select_related('order')
+        order_ids = order_items.values_list('order_id', flat=True).distinct()
+        feedbacks = Feedback.objects.filter(order_id__in=order_ids).select_related('user').order_by('-created_at')[:10]
+        return FeedbackSerializer(feedbacks, many=True).data

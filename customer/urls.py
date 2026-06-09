@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('api/auth/me/', views.me, name='me'),
     path('api/menu/', views.menu_list, name='menu-list'),
+    path('api/menu/<int:item_id>/', views.menu_item_detail, name='menu-item-detail'),
     path('api/cart/', views.get_cart, name='cart'),
     path('api/cart/add/', views.add_to_cart, name='cart-add'),
     path('api/cart/item/<uuid:cart_item_id>/', views.update_cart_item, name='cart-item-update'),

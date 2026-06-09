@@ -25,7 +25,7 @@ from .models import (
 )
 from .serializers import (
     RegisterSerializer, StoreRegisterSerializer, LoginSerializer, UserSerializer,
-    MenuItemSerializer, CartSerializer, CartItemSerializer,
+    MenuItemSerializer, MenuItemDetailSerializer, CartSerializer, CartItemSerializer,
     AddCartItemSerializer, UpdateCartItemSerializer,
     OrderSerializer, FeedbackSerializer, CreateFeedbackSerializer,
     ForgotPasswordSerializer, ResetPasswordSerializer
@@ -255,10 +255,18 @@ def me(request):
 @permission_classes([AllowAny])
 def menu_list(request):
     category = request.query_params.get('category')
-    items = MenuItem.objects.filter(is_available=True)
+    items = MenuItem.objects.filter(is_available=True).select_related('store_owner')
     if category:
         items = items.filter(category=category)
     serializer = MenuItemSerializer(items, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def menu_item_detail(request, item_id):
+    item = get_object_or_404(MenuItem.objects.select_related('store_owner'), item_id=item_id)
+    serializer = MenuItemDetailSerializer(item)
     return Response(serializer.data)
 
 
@@ -593,7 +601,7 @@ def store_create_menu_item(request):
         return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
     serializer = MenuItemSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save()
+        serializer.save(store_owner=request.user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
