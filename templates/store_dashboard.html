@@ -60,6 +60,25 @@
   .menu-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
   .dash-tab-content { display: none; }
   .dash-tab-content.active { display: block; }
+  .feedback-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .feedback-item { padding: 0.85rem 1rem; background: #fff; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .notif-btn { position: relative; background: none; border: none; padding: 0.4rem; cursor: pointer; border-radius: 10px; color: #4b5563; display: flex; align-items: center; transition: background 0.2s; }
+  .notif-btn:hover { background: #e5e7eb; }
+  .notif-badge { position: absolute; top: 0; right: 0; min-width: 16px; height: 16px; background: #ef4444; color: #fff; font-size: 0.6rem; font-weight: 700; border-radius: 2rem; display: flex; align-items: center; justify-content: center; padding: 0 3px; transform: translate(2px, -2px); }
+  .notif-dropdown { position: absolute; top: calc(100% + 8px); right: 0; width: 360px; background: #fff; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.12); border: 1px solid #f0f0f0; z-index: 1000; max-height: 480px; overflow-y: auto; display: none; }
+  .notif-dropdown.open { display: block; }
+  .notif-header { padding: 0.85rem 1rem; border-bottom: 1px solid #f0f0f0; font-size: 0.85rem; font-weight: 700; color: #1a1a1a; display: flex; justify-content: space-between; align-items: center; }
+  .notif-item { padding: 0.75rem 1rem; display: flex; gap: 0.6rem; align-items: flex-start; border-bottom: 1px solid #f9fafb; transition: background 0.15s; }
+  .notif-item:hover { background: #f9fafb; }
+  .notif-item:last-child { border-bottom: none; }
+  .notif-icon { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.9rem; }
+  .notif-body { flex: 1; min-width: 0; }
+  .notif-body strong { font-size: 0.8rem; display: block; color: #1a1a1a; }
+  .notif-body span { font-size: 0.72rem; color: #6b7280; }
+  .notif-body small { font-size: 0.65rem; color: #9ca3af; }
+  .notif-empty { padding: 2rem; text-align: center; color: #9ca3af; font-size: 0.85rem; }
+  .notif-overlay { position: fixed; inset: 0; z-index: 999; display: none; }
+  .notif-overlay.open { display: block; }
 </style>
 
 <div class="store-layout">
@@ -76,6 +95,15 @@
     <button class="store-nav-item" data-tab="menu">
       <i data-lucide="utensils"></i> Menu
     </button>
+    <button class="store-nav-item" data-tab="feedback">
+      <i data-lucide="message-square"></i> Feedback
+    </button>
+    <button class="store-nav-item" data-tab="analytics">
+      <i data-lucide="bar-chart-3"></i> Analytics
+    </button>
+    <button class="store-nav-item" data-tab="settings">
+      <i data-lucide="settings"></i> Settings
+    </button>
     <div class="store-sidebar-footer">
       <button class="store-nav-item" id="sidebarLogoutBtn">
         <i data-lucide="log-out"></i> Sign Out
@@ -90,6 +118,20 @@
         <p class="text-muted small mb-0" id="pageSubtitle">Store performance summary</p>
       </div>
       <div class="store-header-right">
+        <div style="position:relative;">
+          <button class="notif-btn" id="notifBtn">
+            <i data-lucide="bell" style="width:20px;height:20px;"></i>
+            <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
+          </button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-header">
+              <span>Notifications</span>
+              <span class="text-muted" style="font-size:0.72rem;font-weight:400;" id="notifTime"></span>
+            </div>
+            <div id="notifList"></div>
+          </div>
+        </div>
+        <div class="notif-overlay" id="notifOverlay"></div>
         <span style="font-size:0.85rem;font-weight:600;color:#4b5563;">
           <i data-lucide="store" style="width:16px;height:16px;vertical-align:text-bottom;"></i>
           {{ user.store_name }}
@@ -139,11 +181,13 @@
       <div class="card">
         <div class="card-header">
           <h5>All Orders</h5>
-          <div style="flex:1;min-width:140px;max-width:240px;margin-left:auto;position:relative;">
-            <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#9ca3af;pointer-events:none;"></i>
-            <input type="text" id="ordersSearch" placeholder="Search orders..." style="width:100%;padding:0.35rem 0.7rem 0.35rem 1.7rem;border-radius:2rem;border:1px solid #e5e7eb;font-size:0.75rem;outline:none;background:#f9fafb;">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-left:auto;">
+            <div style="min-width:140px;max-width:200px;position:relative;">
+              <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#9ca3af;pointer-events:none;"></i>
+              <input type="text" id="ordersSearch" placeholder="Search orders..." style="width:100%;padding:0.35rem 0.7rem 0.35rem 1.7rem;border-radius:2rem;border:1px solid #e5e7eb;font-size:0.75rem;outline:none;background:#f9fafb;">
+            </div>
+            <span id="orderCount" class="badge" style="background:#ccff00;color:#1a1a1a;">0</span>
           </div>
-          <span id="orderCount" class="badge" style="background:#ccff00;color:#1a1a1a;margin-left:0.5rem;">0</span>
         </div>
         <div class="card-body" id="ordersList" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
       </div>
@@ -170,6 +214,101 @@
           </div>
         </div>
         <div class="card-body" id="menuList" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+      </div>
+    </div>
+
+    <div id="tabFeedback" class="dash-tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h5>Customer Feedback</h5>
+          <span id="feedbackCount" class="badge" style="background:#ccff00;color:#1a1a1a;">0</span>
+        </div>
+        <div class="card-body">
+          <div class="feedback-list" id="feedbackList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tabAnalytics" class="dash-tab-content">
+      <div class="stat-grid" style="margin-bottom:0;">
+        <div class="stat-box">
+          <div class="stat-box-icon" style="background:#fef3c7;color:#f59e0b;"><i data-lucide="trending-up"></i></div>
+          <div class="stat-box-body">
+            <h6>Avg. Order Value</h6>
+            <strong id="statAvgOrder">₱0.00</strong>
+          </div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-icon" style="background:#e0e7ff;color:#4f46e5;"><i data-lucide="star"></i></div>
+          <div class="stat-box-body">
+            <h6>Feedback Received</h6>
+            <strong id="statFeedbackCount">0</strong>
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem;">
+        <div class="card">
+          <div class="card-header"><h5>Revenue Trend</h5></div>
+          <div class="card-body"><canvas id="revenueChart" height="200"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h5>Top Items</h5></div>
+          <div class="card-body"><canvas id="topItemsChart" height="200"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h5>Orders by Hour</h5></div>
+          <div class="card-body"><canvas id="peakHoursChart" height="200"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tabSettings" class="dash-tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h5>Store Settings</h5>
+        </div>
+        <div class="card-body">
+          <form id="settingsForm" style="max-width:600px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+              <div style="grid-column:1 / -1;">
+                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Store Name</label>
+                <input type="text" id="setStoreName" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.5rem 0.75rem;font-size:0.85rem;width:100%;" required>
+              </div>
+              <div style="grid-column:1 / -1;">
+                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Description</label>
+                <textarea id="setDescription" rows="3" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.5rem 0.75rem;font-size:0.85rem;width:100%;"></textarea>
+              </div>
+              <div>
+                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Contact Number</label>
+                <input type="text" id="setContactNumber" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.5rem 0.75rem;font-size:0.85rem;width:100%;">
+              </div>
+              <div>
+                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Address</label>
+                <input type="text" id="setAddress" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.5rem 0.75rem;font-size:0.85rem;width:100%;">
+              </div>
+              <div>
+                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Opening Time</label>
+                <input type="time" id="setOpeningTime" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.5rem 0.75rem;font-size:0.85rem;width:100%;">
+              </div>
+              <div>
+                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Closing Time</label>
+                <input type="time" id="setClosingTime" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.5rem 0.75rem;font-size:0.85rem;width:100%;">
+              </div>
+              <div style="grid-column:1 / -1;">
+                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Logo</label>
+                <input type="file" id="setLogo" accept="image/*" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.35rem 0.75rem;font-size:0.85rem;width:100%;">
+              </div>
+              <div style="grid-column:1 / -1;">
+                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Banner</label>
+                <input type="file" id="setBanner" accept="image/*" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.35rem 0.75rem;font-size:0.85rem;width:100%;">
+              </div>
+            </div>
+            <div style="margin-top:1rem;display:flex;gap:0.75rem;align-items:center;">
+              <button type="submit" class="btn btn-sm" style="background:#1a1a1a;color:#fff;font-weight:700;border-radius:10px;border:none;padding:0.5rem 1.5rem;font-size:0.85rem;">Save Settings</button>
+              <span id="settingsStatus" style="font-size:0.8rem;font-weight:600;"></span>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   </div>
@@ -239,6 +378,7 @@
     </div>
   </div>
 </div>
+
 {% endblock %}
 {% block scripts %}
 <script>
@@ -246,15 +386,21 @@ lucide.createIcons();
 
 let currentOrders = [];
 let currentMenu = [];
+let storeFeedback = [];
 let menuCategoryFilter = '';
 let menuSearchQuery = '';
 let overviewSearchQuery = '';
 let ordersSearchQuery = '';
+let notifData = null;
+let notifInterval = null;
 
 const pageMeta = {
   overview: ['Overview', 'Store performance summary'],
   orders: ['Orders', 'View all store orders'],
   menu: ['Menu', 'Manage your menu items'],
+  feedback: ['Feedback', 'Review customer feedback'],
+  settings: ['Settings', 'Update your store profile'],
+  analytics: ['Analytics', 'Store performance analytics'],
 };
 
 function renderOrders() {
@@ -279,7 +425,7 @@ function renderOrders() {
     const items = order.items.map(i => i.item_name + ' x' + i.quantity).join(', ');
     const statusMeta = {
       pending: { color: '#f59e0b', bg: '#fef3c7', label: 'Pending' },
-      received: { color: '#6b7280', bg: '#f3f4f6', label: 'Received' },
+      store_accepted: { color: '#6b7280', bg: '#f3f4f6', label: 'Accepted' },
       preparing: { color: '#3b82f6', bg: '#eff6ff', label: 'Preparing' },
       ready_for_pickup: { color: '#10b981', bg: '#ecfdf5', label: 'Ready for Pickup' },
       completed: { color: '#6b7280', bg: '#f3f4f6', label: 'Completed' },
@@ -303,9 +449,9 @@ function renderOrders() {
         '</div>' +
         '<div style="flex-shrink:0;display:flex;flex-direction:column;gap:0.35rem;">' +
           (order.status === 'pending'
-            ? '<button class="btn btn-sm" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'received\')"><i data-lucide="check" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Accept</button>'
+            ? '<button class="btn btn-sm" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'store_accepted\')"><i data-lucide="check" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Accept</button>'
             : '') +
-          (order.status === 'received'
+(order.status === 'store_accepted'
             ? '<button class="btn btn-sm" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'preparing\')"><i data-lucide="check" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Prepare</button>'
             : '') +
           (order.status === 'preparing'
@@ -437,6 +583,196 @@ function renderMenu() {
   lucide.createIcons();
 }
 
+function renderFeedback() {
+  const container = document.getElementById('feedbackList');
+  if (!storeFeedback.length) {
+    container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="message-square" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">No feedback yet.</p></div>';
+    document.getElementById('feedbackCount').textContent = '0';
+    return;
+  }
+  const satColors = {very_satisfied:'#16a34a',satisfied:'#22c55e',neutral:'#f59e0b',dissatisfied:'#ef4444',very_dissatisfied:'#dc2626'};
+  const satLabels = {very_satisfied:'Very Satisfied',satisfied:'Satisfied',neutral:'Neutral',dissatisfied:'Dissatisfied',very_dissatisfied:'Very Dissatisfied'};
+  container.innerHTML = storeFeedback.map(fb => {
+    const stars = '&#9733;'.repeat(fb.rating) + '&#9734;'.repeat(5 - fb.rating);
+    const satColor = satColors[fb.satisfaction_level] || '#6b7280';
+    const satLabel = satLabels[fb.satisfaction_level] || fb.satisfaction_level;
+    return '<div class="feedback-item"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;flex-wrap:wrap;">' +
+      '<div><strong style="font-size:0.85rem;">' + escapeHtml(fb.user_name || 'Unknown') + '</strong>' +
+      '<span style="color:#f59e0b;font-size:0.85rem;margin-left:0.5rem;">' + stars + '</span>' +
+      '<span class="text-muted small d-block" style="font-size:0.75rem;">Order ' + escapeHtml(fb.order_number || '') + '</span>' +
+      (fb.comments ? '<p class="text-muted small mb-0" style="margin-top:0.25rem;font-style:italic;">"' + escapeHtml(fb.comments) + '"</p>' : '') + '</div>' +
+      '<span class="badge-status" style="background:' + satColor + ';color:#fff;font-size:0.72rem;font-weight:600;padding:0.15rem 0.55rem;border-radius:2rem;">' + satLabel + '</span></div></div>';
+  }).join('');
+  document.getElementById('feedbackCount').textContent = storeFeedback.length;
+  lucide.createIcons();
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function loadFeedback() {
+  const data = await apiGet('/api/store/feedback/');
+  if (data) storeFeedback = data;
+  renderFeedback();
+}
+
+async function loadSettings() {
+  const data = await apiGet('/api/store/profile/');
+  if (!data) return;
+  document.getElementById('setStoreName').value = data.store_name || '';
+  document.getElementById('setDescription').value = data.description || '';
+  document.getElementById('setContactNumber').value = data.contact_number || '';
+  document.getElementById('setAddress').value = data.address || '';
+  document.getElementById('setOpeningTime').value = data.opening_time || '';
+  document.getElementById('setClosingTime').value = data.closing_time || '';
+}
+
+let revenueChartInstance = null;
+let topItemsChartInstance = null;
+let peakHoursChartInstance = null;
+
+async function loadAnalytics() {
+  const summary = await apiGet('/api/store/analytics/summary/');
+  if (summary) {
+    document.getElementById('statAvgOrder').innerHTML = '&#8369;' + parseFloat(summary.average_order_value).toFixed(2);
+    document.getElementById('statFeedbackCount').textContent = summary.feedback_count;
+  }
+  const revenue = await apiGet('/api/store/analytics/revenue/?period=daily&days=14');
+  if (revenue) loadRevenueChart(revenue);
+  const topItems = await apiGet('/api/store/analytics/top-items/?limit=8');
+  if (topItems) loadTopItemsChart(topItems);
+  const peakHours = await apiGet('/api/store/analytics/peak-hours/');
+  if (peakHours) loadPeakHoursChart(peakHours);
+}
+
+function loadRevenueChart(data) {
+  const ctx = document.getElementById('revenueChart').getContext('2d');
+  if (revenueChartInstance) revenueChartInstance.destroy();
+  revenueChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.map(d => d.period ? new Date(d.period).toLocaleDateString() : 'N/A'),
+      datasets: [{
+        label: 'Revenue',
+        data: data.map(d => d.revenue),
+        borderColor: '#16a34a',
+        backgroundColor: 'rgba(22, 163, 74, 0.1)',
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+
+function loadTopItemsChart(data) {
+  const ctx = document.getElementById('topItemsChart').getContext('2d');
+  if (topItemsChartInstance) topItemsChartInstance.destroy();
+  topItemsChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.name.length > 15 ? d.name.substring(0, 15) + '...' : d.name),
+      datasets: [{
+        label: 'Sold',
+        data: data.map(d => d.quantity),
+        backgroundColor: '#4f46e5',
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+  });
+}
+
+function loadPeakHoursChart(data) {
+  const ctx = document.getElementById('peakHoursChart').getContext('2d');
+  if (peakHoursChartInstance) peakHoursChartInstance.destroy();
+  const hours = Array.from({length: 24}, (_, i) => i);
+  const orderCounts = hours.map(h => {
+    const entry = data.find(d => d.hour === h);
+    return entry ? entry.orders : 0;
+  });
+  peakHoursChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: hours.map(h => h + ':00'),
+      datasets: [{
+        label: 'Orders',
+        data: orderCounts,
+        backgroundColor: '#f59e0b',
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+  });
+}
+
+function renderNotifications() {
+  const badge = document.getElementById('notifBadge');
+  const list = document.getElementById('notifList');
+  const timeEl = document.getElementById('notifTime');
+  if (!notifData || notifData.total_unread === 0) {
+    badge.style.display = 'none';
+    badge.textContent = '0';
+  } else {
+    badge.style.display = 'flex';
+    badge.textContent = notifData.total_unread;
+  }
+  timeEl.textContent = new Date().toLocaleTimeString();
+  if (!notifData || (notifData.orders.length === 0 && notifData.feedback.length === 0)) {
+    list.innerHTML = '<div class="notif-empty">No new notifications</div>';
+    return;
+  }
+  let html = '';
+  notifData.orders.forEach(o => {
+    html += '<div class="notif-item">' +
+      '<div class="notif-icon" style="background:#fef3c7;color:#f59e0b;"><i data-lucide="shopping-bag" style="width:16px;height:16px;"></i></div>' +
+      '<div class="notif-body">' +
+        '<strong>New Order #' + escapeHtml(o.order_number) + '</strong>' +
+        '<span>' + escapeHtml(o.customer_name) + ' &bull; &#8369;' + parseFloat(o.total_amount).toFixed(2) + '</span>' +
+        '<small>' + new Date(o.created_at).toLocaleString() + '</small>' +
+      '</div>' +
+    '</div>';
+  });
+  notifData.feedback.forEach(fb => {
+    html += '<div class="notif-item">' +
+      '<div class="notif-icon" style="background:#e0e7ff;color:#4f46e5;"><i data-lucide="message-square" style="width:16px;height:16px;"></i></div>' +
+      '<div class="notif-body">' +
+        '<strong>New Feedback from ' + escapeHtml(fb.user_name || 'Unknown') + '</strong>' +
+        '<span>Order ' + escapeHtml(fb.order_number || '') + ' &bull; ' + '&#9733;'.repeat(fb.rating) + '</span>' +
+        (fb.comments ? '<small style="font-style:italic;">"' + escapeHtml(fb.comments.substring(0, 80)) + (fb.comments.length > 80 ? '...' : '') + '"</small>' : '<small>No comment</small>') +
+      '</div>' +
+    '</div>';
+  });
+  list.innerHTML = html;
+  lucide.createIcons();
+}
+
+async function loadNotifications() {
+  const data = await apiGet('/api/store/notifications/');
+  if (data) notifData = data;
+  renderNotifications();
+}
+
+async function markNotificationsRead() {
+  await apiPost('/api/store/notifications/read/', {});
+  if (notifData) notifData.total_unread = 0;
+  renderNotifications();
+}
+
 async function loadOrders() {
   const data = await apiGet('/api/store/orders/');
   if (data) currentOrders = data;
@@ -496,6 +832,24 @@ function confirmDelete(itemId) {
 document.addEventListener('DOMContentLoaded', function () {
   loadOrders();
   loadMenu();
+  loadFeedback();
+  loadNotifications();
+  notifInterval = setInterval(loadNotifications, 15000);
+
+  document.getElementById('notifBtn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    const dd = document.getElementById('notifDropdown');
+    const ov = document.getElementById('notifOverlay');
+    const isOpen = dd.classList.contains('open');
+    dd.classList.toggle('open');
+    ov.classList.toggle('open');
+    if (!isOpen) markNotificationsRead();
+  });
+
+  document.getElementById('notifOverlay').addEventListener('click', function () {
+    document.getElementById('notifDropdown').classList.remove('open');
+    this.classList.remove('open');
+  });
 
   document.querySelectorAll('.menu-filter-btn').forEach(btn => {
     btn.addEventListener('click', function () {
@@ -535,6 +889,8 @@ document.addEventListener('DOMContentLoaded', function () {
       const meta = pageMeta[tab] || ['', ''];
       document.getElementById('pageTitle').textContent = meta[0];
       document.getElementById('pageSubtitle').textContent = meta[1];
+      if (tab === 'settings') loadSettings();
+      if (tab === 'analytics') loadAnalytics();
     });
   });
 
@@ -551,6 +907,38 @@ document.addEventListener('DOMContentLoaded', function () {
       stock: document.getElementById('itemStock').value,
     });
     btn.disabled = false;
+  });
+
+  document.getElementById('settingsForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const statusEl = document.getElementById('settingsStatus');
+    statusEl.textContent = 'Saving...';
+    statusEl.style.color = '#6b7280';
+    const formData = new FormData();
+    formData.append('store_name', document.getElementById('setStoreName').value);
+    formData.append('description', document.getElementById('setDescription').value);
+    formData.append('contact_number', document.getElementById('setContactNumber').value);
+    formData.append('address', document.getElementById('setAddress').value);
+    formData.append('opening_time', document.getElementById('setOpeningTime').value || '');
+    formData.append('closing_time', document.getElementById('setClosingTime').value || '');
+    const logoFile = document.getElementById('setLogo').files[0];
+    const bannerFile = document.getElementById('setBanner').files[0];
+    if (logoFile) formData.append('logo', logoFile);
+    if (bannerFile) formData.append('banner', bannerFile);
+    const token = localStorage.getItem('access_token');
+    try {
+      const res = await fetch('/api/store/profile/', {
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      statusEl.textContent = 'Saved successfully!';
+      statusEl.style.color = '#16a34a';
+    } catch (err) {
+      statusEl.textContent = 'Failed to save. Try again.';
+      statusEl.style.color = '#ef4444';
+    }
   });
 
   document.getElementById('menuModal').addEventListener('hidden.bs.modal', function () {
@@ -577,4 +965,5 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 {% endblock %}

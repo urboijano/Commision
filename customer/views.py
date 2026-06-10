@@ -4,10 +4,11 @@ import random
 from decimal import Decimal
 
 from django.conf import settings
+from django.utils import timezone
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.mail import EmailMultiAlternatives
-from django.db import IntegrityError, transaction
-from django.db.models import Sum
+from django.db import IntegrityError, transaction, models
+from django.db.models import Exists, OuterRef, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth import authenticate, login as django_login, logout as django_logout
 from django.contrib.auth.decorators import login_required
@@ -20,15 +21,21 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import (
-    User, ValidID, PasswordResetCode, MenuItem, Cart, CartItem,
-    Order, OrderItem, OrderStatusHistory, Feedback
+    User, ValidID, PasswordResetCode, MenuItem, ItemVariation, Cart, CartItem,
+    Order, OrderItem, OrderStatusHistory, Feedback, StoreProfile, Store,
+    Discount, BundleDeal, BundleItem, StoreOwnerStatus,
 )
 from .serializers import (
     RegisterSerializer, StoreRegisterSerializer, LoginSerializer, UserSerializer,
     MenuItemSerializer, MenuItemDetailSerializer, CartSerializer, CartItemSerializer,
     AddCartItemSerializer, UpdateCartItemSerializer,
     OrderSerializer, FeedbackSerializer, CreateFeedbackSerializer,
-    ForgotPasswordSerializer, ResetPasswordSerializer
+    ForgotPasswordSerializer, ResetPasswordSerializer,
+    StoreProfileSerializer, StoreProfileUpdateSerializer,
+    ItemVariationSerializer,
+    StoreOrderSerializer, StoreOrderItemSerializer,
+    DiscountSerializer, BundleDealSerializer, ApplyDiscountSerializer,
+    StoreSerializer, StoreUpdateSerializer,
 )
 from .consumers import notify_order_status_change
 
@@ -115,6 +122,16 @@ def store_register(request):
             if dti_permit:
                 user.dti_permit = compress_image(dti_permit)
                 user.save()
+            StoreProfile.objects.create(
+                user=user,
+                store_name=data['store_name'],
+                dti_permit=user.dti_permit if user.dti_permit else dti_permit,
+            )
+            store = Store.objects.create(
+                owner=user,
+                name=data['store_name'],
+                dti_permit=user.dti_permit if user.dti_permit else dti_permit,
+            )
     except IntegrityError:
         return Response(
             {'error': 'An account with this email already exists.'},
@@ -125,6 +142,92 @@ def store_register(request):
         'message': 'Registration submitted. Your account is pending admin approval.',
         'user': UserSerializer(user).data,
     }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def store_profile(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    profile = get_object_or_404(StoreProfile, user=request.user)
+
+    if request.method == 'GET':
+        serializer = StoreProfileSerializer(profile)
+        return Response(serializer.data)
+
+    data = request.data.copy()
+    for field in ['logo', 'banner']:
+        if field in request.FILES:
+            data[field] = request.FILES[field]
+    serializer = StoreProfileUpdateSerializer(profile, data=data, partial=request.method == 'PATCH')
+    if serializer.is_valid():
+        serializer.save()
+        return Response(StoreProfileSerializer(profile).data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def store_toggle_open(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    profile = get_object_or_404(StoreProfile, user=request.user)
+    profile.is_open = not profile.is_open
+    profile.save(update_fields=['is_open'])
+    return Response({'is_open': profile.is_open})
+
+
+def get_active_store(request):
+    store_id = request.session.get('active_store_id')
+    if store_id:
+        try:
+            return Store.objects.get(store_id=store_id, owner=request.user)
+        except Store.DoesNotExist:
+            pass
+    return Store.objects.filter(owner=request.user).first()
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def store_manage(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    if request.method == 'GET':
+        stores = Store.objects.filter(owner=request.user).order_by('name')
+        return Response(StoreSerializer(stores, many=True).data)
+    serializer = StoreUpdateSerializer(data=request.data)
+    if serializer.is_valid():
+        store = Store.objects.create(owner=request.user, **serializer.validated_data)
+        return Response(StoreSerializer(store).data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def store_manage_detail(request, store_id):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    store = get_object_or_404(Store, store_id=store_id, owner=request.user)
+    if request.method == 'GET':
+        return Response(StoreSerializer(store).data)
+    if request.method == 'PUT':
+        serializer = StoreUpdateSerializer(store, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(StoreSerializer(store).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    store.delete()
+    return Response({'message': 'Store deleted.'})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def store_switch(request, store_id):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    store = get_object_or_404(Store, store_id=store_id, owner=request.user)
+    request.session['active_store_id'] = store.store_id
+    return Response({'store_id': store.store_id, 'store_name': store.name})
 
 
 @api_view(['POST'])
@@ -372,6 +475,8 @@ def place_order(request):
                 unit_price=ci.item.price,
                 quantity=ci.quantity,
                 subtotal=ci.item.price * ci.quantity,
+                store_owner=ci.item.store_owner,
+                store=ci.item.store,
             )
 
             ci.item.stock -= ci.quantity
@@ -561,9 +666,22 @@ def force_order_status(request, order_id):
 def store_orders(request):
     if request.user.user_type != 'store_owner':
         return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
-    orders = Order.objects.all().prefetch_related('items', 'status_history', 'user').order_by('-created_at')
-    serializer = OrderSerializer(orders, many=True)
-    return Response(serializer.data)
+    store = get_active_store(request)
+    order_filter = {'items__store': store} if store else {'items__store_owner': request.user}
+    orders = Order.objects.filter(
+        **order_filter
+    ).prefetch_related(
+        'status_history', 'user'
+    ).distinct().order_by('-created_at')
+
+    data = []
+    for order in orders:
+        order_data = StoreOrderSerializer(order).data
+        my_items = order.items.filter(store_owner=request.user)
+        order_data['items'] = StoreOrderItemSerializer(my_items, many=True).data
+        order_data['total_items'] = my_items.count()
+        data.append(order_data)
+    return Response(data)
 
 
 @api_view(['POST'])
@@ -575,11 +693,15 @@ def store_update_order_status(request, order_id):
     if status_val not in dict(Order.STATUS_CHOICES):
         return Response({'error': 'Invalid status.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    order = get_object_or_404(Order, order_id=order_id)
+    order = get_object_or_404(
+        Order.objects.filter(items__store_owner=request.user).distinct(),
+        order_id=order_id
+    )
 
     valid_transitions = {
-        'pending': ['received'],
-        'received': ['preparing'],
+        'pending': ['store_accepted', 'store_rejected'],
+        'store_accepted': ['preparing'],
+        'store_rejected': ['pending'],
         'preparing': ['ready_for_pickup'],
         'ready_for_pickup': ['completed'],
     }
@@ -591,6 +713,10 @@ def store_update_order_status(request, order_id):
                 {'error': f'Cannot transition from {order.status} to {status_val}.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        if status_val == 'store_rejected':
+            reason = request.data.get('reason', '')
+            order.rejection_reason = reason
 
         order.status = status_val
         if status_val == 'completed':
@@ -610,12 +736,139 @@ def store_update_order_status(request, order_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def store_set_eta(request, order_id):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    order = get_object_or_404(
+        Order.objects.filter(items__store_owner=request.user).distinct(),
+        order_id=order_id
+    )
+    eta = request.data.get('estimated_ready_at')
+    if not eta:
+        return Response({'error': 'estimated_ready_at is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    from django.utils import dateparse
+    parsed = dateparse.parse_datetime(eta)
+    if not parsed:
+        return Response({'error': 'Invalid datetime format. Use ISO 8601.'}, status=status.HTTP_400_BAD_REQUEST)
+    order.estimated_ready_at = parsed
+    order.save(update_fields=['estimated_ready_at'])
+    return Response({'estimated_ready_at': parsed.isoformat()})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def store_analytics_summary(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    today = timezone.now().date()
+    store_orders_qs = Order.objects.filter(items__store_owner=request.user).distinct()
+    today_orders = store_orders_qs.filter(created_at__date=today)
+    completed_orders = store_orders_qs.filter(status='completed')
+    total_revenue = completed_orders.aggregate(total=models.Sum('total_amount'))['total'] or 0
+    today_revenue = today_orders.filter(status='completed').aggregate(total=models.Sum('total_amount'))['total'] or 0
+    total_orders = completed_orders.count()
+    today_order_count = today_orders.count()
+    menu_count = MenuItem.objects.filter(store_owner=request.user).count()
+    feedback_count = Feedback.objects.filter(order__items__store_owner=request.user).distinct().count()
+
+    return Response({
+        'total_orders': total_orders,
+        'today_orders': today_order_count,
+        'total_revenue': float(total_revenue),
+        'today_revenue': float(today_revenue),
+        'menu_count': menu_count,
+        'feedback_count': feedback_count,
+        'average_order_value': float(total_revenue / total_orders) if total_orders else 0,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def store_analytics_revenue(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    period = request.query_params.get('period', 'daily')
+    days = int(request.query_params.get('days', '30'))
+    from django.utils import timezone
+    from django.db.models import Sum, Count
+    from django.db.models.functions import TruncDate, TruncWeek, TruncMonth
+    trunc_fn = {'daily': TruncDate, 'weekly': TruncWeek, 'monthly': TruncMonth}
+    trunc = trunc_fn.get(period, TruncDate)
+    cutoff = timezone.now() - timezone.timedelta(days=days)
+    data = (
+        Order.objects
+        .filter(
+            Exists(OrderItem.objects.filter(
+                order=OuterRef('pk'), store_owner=request.user
+            )),
+            status='completed', created_at__gte=cutoff
+        )
+        .annotate(period=trunc('created_at'))
+        .values('period')
+        .annotate(revenue=Sum('total_amount'), count=Count('order_id'))
+        .order_by('period')
+    )
+    return Response([
+        {'period': entry['period'].isoformat() if entry['period'] else None,
+         'revenue': float(entry['revenue']),
+         'orders': entry['count']}
+        for entry in data
+    ])
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def store_analytics_top_items(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    limit = int(request.query_params.get('limit', '10'))
+    data = (
+        OrderItem.objects
+        .filter(store_owner=request.user, order__status='completed')
+        .values('item_name')
+        .annotate(
+            total_qty=models.Sum('quantity'),
+            total_revenue=models.Sum('subtotal')
+        )
+        .order_by('-total_qty')[:limit]
+    )
+    return Response([
+        {'name': entry['item_name'],
+         'quantity': entry['total_qty'],
+         'revenue': float(entry['total_revenue'])}
+        for entry in data
+    ])
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def store_analytics_peak_hours(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    from django.db.models.functions import ExtractHour
+    data = (
+        Order.objects
+        .filter(items__store_owner=request.user)
+        .annotate(hour=ExtractHour('created_at'))
+        .values('hour')
+        .annotate(count=models.Count('order_id'))
+        .order_by('hour')
+    )
+    return Response([
+        {'hour': entry['hour'], 'orders': entry['count']}
+        for entry in data
+    ])
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def store_create_menu_item(request):
     if request.user.user_type != 'store_owner':
         return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
     serializer = MenuItemSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save(store_owner=request.user)
+        store = get_active_store(request)
+        serializer.save(store_owner=request.user, store=store)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -625,7 +878,7 @@ def store_create_menu_item(request):
 def store_update_menu_item(request, item_id):
     if request.user.user_type != 'store_owner':
         return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
-    item = get_object_or_404(MenuItem, item_id=item_id)
+    item = get_object_or_404(MenuItem, item_id=item_id, store_owner=request.user)
     serializer = MenuItemSerializer(item, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
@@ -638,9 +891,156 @@ def store_update_menu_item(request, item_id):
 def store_delete_menu_item(request, item_id):
     if request.user.user_type != 'store_owner':
         return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
-    item = get_object_or_404(MenuItem, item_id=item_id)
+    item = get_object_or_404(MenuItem, item_id=item_id, store_owner=request.user)
     item.delete()
     return Response({'message': 'Menu item deleted.'})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def store_toggle_featured(request, item_id):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    item = get_object_or_404(MenuItem, item_id=item_id, store_owner=request.user)
+    item.is_featured = not item.is_featured
+    item.save(update_fields=['is_featured'])
+    return Response({'is_featured': item.is_featured})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def store_bulk_menu_update(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    item_ids = request.data.get('item_ids', [])
+    updates = request.data.get('updates', {})
+    if not item_ids:
+        return Response({'error': 'No items specified.'}, status=status.HTTP_400_BAD_REQUEST)
+    items = MenuItem.objects.filter(item_id__in=item_ids, store_owner=request.user)
+    allowed_fields = {'is_available', 'price', 'category', 'is_featured', 'stock'}
+    update_kwargs = {k: v for k, v in updates.items() if k in allowed_fields}
+    if not update_kwargs:
+        return Response({'error': 'No valid fields to update.'}, status=status.HTTP_400_BAD_REQUEST)
+    updated = items.update(**update_kwargs)
+    return Response({'message': f'{updated} item(s) updated.', 'updated_fields': list(update_kwargs.keys())})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def store_duplicate_menu_item(request, item_id):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    original = get_object_or_404(MenuItem, item_id=item_id, store_owner=request.user)
+    new_item = MenuItem.objects.create(
+        store_owner=request.user,
+        name=f"{original.name} (Copy)",
+        description=original.description,
+        price=original.price,
+        category=original.category,
+        image_url=original.image_url,
+        stock=0,
+        is_featured=False,
+        available_from=original.available_from,
+        available_to=original.available_to,
+        available_days=original.available_days,
+    )
+    serializer = MenuItemSerializer(new_item)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'POST', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def store_item_variations(request, item_id):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    item = get_object_or_404(MenuItem, item_id=item_id, store_owner=request.user)
+
+    if request.method == 'GET':
+        variations = item.variations.all()
+        serializer = ItemVariationSerializer(variations, many=True)
+        return Response(serializer.data)
+
+    if request.method == 'POST':
+        serializer = ItemVariationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(item=item)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    if request.method == 'PUT':
+        variation_id = request.data.get('variation_id')
+        if not variation_id:
+            return Response({'error': 'variation_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        variation = get_object_or_404(ItemVariation, variation_id=variation_id, item=item)
+        serializer = ItemVariationSerializer(variation, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    if request.method == 'DELETE':
+        variation_id = request.data.get('variation_id')
+        if not variation_id:
+            return Response({'error': 'variation_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        variation = get_object_or_404(ItemVariation, variation_id=variation_id, item=item)
+        variation.delete()
+        return Response({'message': 'Variation deleted.'})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def store_feedback(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    feedback = Feedback.objects.filter(
+        order__items__item__store_owner=request.user
+    ).select_related('user', 'order').distinct().order_by('-created_at')
+    serializer = FeedbackSerializer(feedback, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def store_notifications(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    from django.utils import timezone
+    last_read = request.user.notifications_last_read_at
+    if last_read is None:
+        last_read = timezone.now() - timezone.timedelta(days=7)
+    new_orders = Order.objects.filter(
+        created_at__gt=last_read,
+        items__item__store_owner=request.user
+    ).distinct().order_by('-created_at')[:5]
+    new_feedback = Feedback.objects.filter(
+        created_at__gt=last_read,
+        order__items__item__store_owner=request.user
+    ).select_related('user', 'order').distinct().order_by('-created_at')[:5]
+    return Response({
+        'new_orders_count': new_orders.count(),
+        'new_feedback_count': new_feedback.count(),
+        'total_unread': new_orders.count() + new_feedback.count(),
+        'orders': [{
+            'order_id': str(o.order_id),
+            'order_number': o.order_number,
+            'total_amount': str(o.total_amount),
+            'status': o.status,
+            'created_at': o.created_at.isoformat(),
+            'customer_name': o.user.full_name if o.user else 'Unknown',
+        } for o in new_orders],
+        'feedback': FeedbackSerializer(new_feedback, many=True).data,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def store_notifications_read(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    from django.utils import timezone
+    request.user.notifications_last_read_at = timezone.now()
+    request.user.save(update_fields=['notifications_last_read_at'])
+    return Response({'status': 'ok'})
 
 
 @api_view(['GET'])
@@ -648,9 +1048,143 @@ def store_delete_menu_item(request, item_id):
 def store_all_menu_items(request):
     if request.user.user_type != 'store_owner':
         return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
-    items = MenuItem.objects.all().order_by('name')
+    store = get_active_store(request)
+    items = MenuItem.objects.filter(store=store).order_by('name') if store else MenuItem.objects.filter(store_owner=request.user).order_by('name')
     serializer = MenuItemSerializer(items, many=True)
     return Response(serializer.data)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def store_discounts(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    if request.method == 'GET':
+        store = get_active_store(request)
+        discounts = Discount.objects.filter(store=store).order_by('-created_at') if store else Discount.objects.filter(store_owner=request.user).order_by('-created_at')
+        serializer = DiscountSerializer(discounts, many=True)
+        return Response(serializer.data)
+    serializer = DiscountSerializer(data=request.data)
+    if serializer.is_valid():
+        store = get_active_store(request)
+        serializer.save(store_owner=request.user, store=store)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def store_discount_detail(request, discount_id):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    discount = get_object_or_404(Discount, discount_id=discount_id, store_owner=request.user)
+    if request.method == 'GET':
+        return Response(DiscountSerializer(discount).data)
+    if request.method == 'PUT':
+        serializer = DiscountSerializer(discount, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    discount.delete()
+    return Response({'message': 'Discount deleted.'})
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def store_bundles(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    if request.method == 'GET':
+        store = get_active_store(request)
+        bundles = BundleDeal.objects.filter(store=store).prefetch_related('bundle_items__item').order_by('-created_at') if store else BundleDeal.objects.filter(store_owner=request.user).prefetch_related('bundle_items__item').order_by('-created_at')
+        serializer = BundleDealSerializer(bundles, many=True)
+        return Response(serializer.data)
+    serializer = BundleDealSerializer(data=request.data)
+    if serializer.is_valid():
+        store = get_active_store(request)
+        bundle = serializer.save(store_owner=request.user, store=store)
+        items_data = request.data.get('items', [])
+        for item_data in items_data:
+            BundleItem.objects.create(
+                bundle=bundle,
+                item_id=item_data.get('item'),
+                quantity=item_data.get('quantity', 1),
+            )
+        return Response(BundleDealSerializer(bundle).data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def store_bundle_detail(request, bundle_id):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    bundle = get_object_or_404(BundleDeal, bundle_id=bundle_id, store_owner=request.user)
+    if request.method == 'GET':
+        return Response(BundleDealSerializer(bundle).data)
+    if request.method == 'PUT':
+        serializer = BundleDealSerializer(bundle, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            if 'items' in request.data:
+                bundle.bundle_items.all().delete()
+                for item_data in request.data.get('items', []):
+                    BundleItem.objects.create(
+                        bundle=bundle,
+                        item_id=item_data.get('item'),
+                        quantity=item_data.get('quantity', 1),
+                    )
+            return Response(BundleDealSerializer(bundle).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    bundle.delete()
+    return Response({'message': 'Bundle deleted.'})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def apply_discount(request):
+    serializer = ApplyDiscountSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    code = serializer.validated_data['code']
+    from django.utils import timezone
+    now = timezone.now()
+    try:
+        discount = Discount.objects.get(
+            code=code, is_active=True,
+            valid_from__lte=now, valid_until__gte=now,
+        )
+    except Discount.DoesNotExist:
+        return Response({'error': 'Invalid or expired discount code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    cart = Cart.objects.filter(user=request.user).prefetch_related('items__item').first()
+    if not cart or not cart.items.exists():
+        return Response({'error': 'Cart is empty.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    cart_total = sum(ci.item.price * ci.quantity for ci in cart.items.all())
+    if cart_total < discount.min_order_amount:
+        return Response({
+            'error': f'Minimum order amount is ₱{discount.min_order_amount}. Your total is ₱{cart_total}.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    if discount.usage_limit and discount.used_count >= discount.usage_limit:
+        return Response({'error': 'Discount code usage limit reached.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if discount.discount_type == 'percentage':
+        amount = cart_total * (discount.discount_value / 100)
+        if discount.max_discount:
+            amount = min(amount, discount.max_discount)
+    else:
+        amount = min(discount.discount_value, cart_total)
+
+    return Response({
+        'discount_id': discount.discount_id,
+        'code': discount.code,
+        'name': discount.name,
+        'discount_amount': float(amount),
+        'new_total': float(cart_total - amount),
+    })
 
 
 @api_view(['GET'])
@@ -705,6 +1239,14 @@ def admin_approve_user(request, user_id):
     user.is_active = True
     user.save()
 
+    if user.user_type == 'store_owner':
+        status_obj, _ = StoreOwnerStatus.objects.get_or_create(user=user)
+        status_obj.rejection_reason = ''
+        status_obj.is_deactivated = False
+        status_obj.deactivation_reason = ''
+        status_obj.reviewed_by = request.user
+        status_obj.save()
+
     login_url = request.build_absolute_uri('/login/')
     html_content = f'''
     <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04);font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
@@ -748,6 +1290,15 @@ def admin_reject_user(request, user_id):
     if user.is_active:
         return Response({'error': 'Cannot reject an active user. Delete instead.'}, status=status.HTTP_400_BAD_REQUEST)
 
+    reason = request.data.get('reason', '')
+
+    if user.user_type == 'store_owner':
+        status_obj, _ = StoreOwnerStatus.objects.get_or_create(user=user)
+        status_obj.rejection_reason = reason
+        status_obj.resubmit_count = 0
+        status_obj.reviewed_by = request.user
+        status_obj.save()
+
     html_content = f'''
     <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04);font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
       <div style="background:#1a1a1a;padding:1.5rem;text-align:center;">
@@ -755,7 +1306,9 @@ def admin_reject_user(request, user_id):
       </div>
       <div style="padding:1.5rem;">
         <h2 style="font-size:1.1rem;font-weight:700;color:#1a1a1a;margin:0 0 0.5rem;">Registration Not Approved</h2>
-        <p style="font-size:0.85rem;color:#6b7280;margin:0;">Hi {user.full_name}, we regret to inform you that your account registration was not approved. If you believe this is a mistake, please contact support.</p>
+        <p style="font-size:0.85rem;color:#6b7280;margin:0 0 0.5rem;">Hi {user.full_name}, we regret to inform you that your account registration was not approved.</p>
+        {f'<p style="font-size:0.85rem;color:#6b7280;margin:0 0 0.5rem;">Reason: {reason}</p>' if reason else ''}
+        {f'<p style="font-size:0.85rem;color:#6b7280;margin:0;">You can re-submit your registration with corrected information by visiting <a href="{request.build_absolute_uri("/register/store/")}" style="color:#4f46e5;">the registration page</a>.</p>' if user.user_type == 'store_owner' else ''}
       </div>
       <div style="background:#f9fafb;padding:1rem;text-align:center;border-top:1px solid #f0f0f0;">
         <span style="font-size:0.75rem;color:#9ca3af;">&copy; 2026 KaonISU. All rights reserved.</span>
@@ -819,6 +1372,91 @@ def admin_all_menu_items(request):
     items = MenuItem.objects.all().order_by('name')
     serializer = MenuItemSerializer(items, many=True)
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_stores(request):
+    if request.user.user_type != 'admin':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    stores = User.objects.filter(user_type='store_owner').select_related('store_profile', 'store_status').order_by('-date_joined')
+    data = []
+    for s in stores:
+        profile = getattr(s, 'store_profile', None)
+        status_obj = getattr(s, 'store_status', None)
+        menu_count = MenuItem.objects.filter(store_owner=s).count()
+        data.append({
+            'user_id': str(s.user_id),
+            'full_name': s.full_name,
+            'email': s.email,
+            'is_active': s.is_active,
+            'store_name': profile.store_name if profile else s.store_name,
+            'description': profile.description if profile else '',
+            'is_open': profile.is_open if profile else False,
+            'contact_number': profile.contact_number if profile else '',
+            'store_slug': profile.store_slug if profile else '',
+            'rejection_reason': status_obj.rejection_reason if status_obj else '',
+            'is_deactivated': status_obj.is_deactivated if status_obj else False,
+            'deactivation_reason': status_obj.deactivation_reason if status_obj else '',
+            'resubmit_count': status_obj.resubmit_count if status_obj else 0,
+            'menu_count': menu_count,
+            'date_joined': s.date_joined.isoformat(),
+        })
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_deactivate_store(request, user_id):
+    if request.user.user_type != 'admin':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    user = get_object_or_404(User, user_id=user_id, user_type='store_owner')
+    reason = request.data.get('reason', '')
+    status_obj, _ = StoreOwnerStatus.objects.get_or_create(user=user)
+    status_obj.is_deactivated = True
+    status_obj.deactivation_reason = reason
+    status_obj.reviewed_by = request.user
+    status_obj.save()
+    user.is_active = False
+    user.save()
+    return Response({'message': f'Store {user.store_name} deactivated.'})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_activate_store(request, user_id):
+    if request.user.user_type != 'admin':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    user = get_object_or_404(User, user_id=user_id, user_type='store_owner')
+    status_obj, _ = StoreOwnerStatus.objects.get_or_create(user=user)
+    status_obj.is_deactivated = False
+    status_obj.deactivation_reason = ''
+    status_obj.reviewed_by = request.user
+    status_obj.save()
+    user.is_active = True
+    user.save()
+    return Response({'message': f'Store {user.store_name} activated.'})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def store_resubmit_permit(request):
+    if request.user.user_type != 'store_owner':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    if request.user.is_active:
+        return Response({'error': 'Account is already active.'}, status=status.HTTP_400_BAD_REQUEST)
+    dti_permit = request.FILES.get('dti_permit')
+    if not dti_permit:
+        return Response({'error': 'DTI permit is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    profile, _ = StoreProfile.objects.get_or_create(user=request.user)
+    profile.dti_permit = compress_image(dti_permit)
+    profile.save()
+    status_obj, _ = StoreOwnerStatus.objects.get_or_create(user=request.user)
+    status_obj.resubmit_count += 1
+    status_obj.last_resubmit_at = timezone.now()
+    status_obj.rejection_reason = ''
+    status_obj.save()
+    return Response({'message': 'Permit re-submitted. Pending admin review.'})
 
 
 @ensure_csrf_cookie

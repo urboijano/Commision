@@ -3,8 +3,9 @@ import re
 from django.db import models
 from rest_framework import serializers
 from .models import (
-    User, ValidID, MenuItem, Cart, CartItem,
-    Order, OrderItem, OrderStatusHistory, Feedback
+    User, ValidID, MenuItem, ItemVariation, Cart, CartItem,
+    Order, OrderItem, OrderStatusHistory, Feedback,
+    StoreProfile, Store, Discount, BundleDeal, BundleItem,
 )
 
 
@@ -105,12 +106,101 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['user_id', 'full_name', 'email', 'user_type', 'user_type_display', 'student_faculty_id', 'store_name', 'dti_permit', 'is_active', 'date_joined']
 
 
+class StoreProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StoreProfile
+        fields = [
+            'store_name', 'store_slug', 'description', 'logo', 'banner',
+            'contact_number', 'address', 'is_open',
+            'opening_time', 'closing_time', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['store_slug', 'created_at', 'updated_at']
+
+
+class StoreProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StoreProfile
+        fields = [
+            'store_name', 'description', 'logo', 'banner',
+            'contact_number', 'address', 'is_open',
+            'opening_time', 'closing_time',
+        ]
+
+
+class StoreSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Store
+        fields = [
+            'store_id', 'name', 'slug', 'description', 'logo', 'banner',
+            'contact_number', 'address', 'is_open',
+            'opening_time', 'closing_time', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['store_id', 'slug', 'created_at', 'updated_at']
+
+
+class StoreUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Store
+        fields = [
+            'name', 'description', 'logo', 'banner',
+            'contact_number', 'address', 'is_open',
+            'opening_time', 'closing_time',
+        ]
+
+
+class ItemVariationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ItemVariation
+        fields = ['variation_id', 'name', 'price_adjustment', 'is_available']
+
+
+class BundleItemSerializer(serializers.ModelSerializer):
+    item_name = serializers.CharField(source='item.name', read_only=True)
+
+    class Meta:
+        model = BundleItem
+        fields = ['item', 'item_name', 'quantity']
+
+
+class BundleDealSerializer(serializers.ModelSerializer):
+    items = BundleItemSerializer(source='bundle_items', many=True, read_only=True)
+
+    class Meta:
+        model = BundleDeal
+        fields = [
+            'bundle_id', 'name', 'items', 'bundle_price',
+            'is_active', 'valid_until', 'created_at',
+        ]
+        read_only_fields = ['bundle_id', 'created_at']
+
+
+class DiscountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Discount
+        fields = [
+            'discount_id', 'name', 'code', 'discount_type', 'discount_value',
+            'min_order_amount', 'max_discount', 'valid_from', 'valid_until',
+            'usage_limit', 'used_count', 'is_active', 'created_at',
+        ]
+        read_only_fields = ['discount_id', 'used_count', 'created_at']
+
+
+class ApplyDiscountSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=50)
+
+
 class MenuItemSerializer(serializers.ModelSerializer):
     category_display = serializers.SerializerMethodField()
+    variations = ItemVariationSerializer(many=True, read_only=True)
 
     class Meta:
         model = MenuItem
-        fields = ['item_id', 'name', 'description', 'price', 'category', 'category_display', 'image_url', 'is_available', 'stock']
+        fields = [
+            'item_id', 'name', 'description', 'price', 'category', 'category_display',
+            'image_url', 'is_available', 'stock', 'is_featured', 'featured_order',
+            'available_from', 'available_to', 'available_days', 'low_stock_threshold',
+            'variations',
+        ]
 
     def validate(self, data):
         if 'stock' in data:
@@ -201,17 +291,43 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = [
             'order_id', 'order_number', 'total_amount', 'status',
             'status_display', 'payment_status', 'items', 'status_history',
-            'notes', 'created_at', 'updated_at', 'user'
+            'notes', 'rejection_reason', 'estimated_ready_at',
+            'created_at', 'updated_at', 'user'
+        ]
+
+
+class StoreOrderItemSerializer(serializers.ModelSerializer):
+    item_image = serializers.URLField(source='item.image_url', read_only=True, default='')
+    category = serializers.CharField(source='item.category', read_only=True, default='')
+
+    class Meta:
+        model = OrderItem
+        fields = ['order_item_id', 'item_name', 'unit_price', 'quantity', 'subtotal', 'item_image', 'category']
+
+
+class StoreOrderSerializer(serializers.ModelSerializer):
+    status_history = OrderStatusHistorySerializer(many=True, read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Order
+        fields = [
+            'order_id', 'order_number', 'total_amount', 'status',
+            'status_display', 'payment_status', 'status_history',
+            'notes', 'rejection_reason', 'estimated_ready_at',
+            'created_at', 'updated_at', 'user'
         ]
 
 
 class FeedbackSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.full_name', read_only=True)
+    order_number = serializers.CharField(source='order.order_number', read_only=True)
 
     class Meta:
         model = Feedback
-        fields = ['feedback_id', 'order', 'user_name', 'rating', 'satisfaction_level', 'comments', 'created_at']
-        read_only_fields = ['feedback_id', 'created_at', 'user_name']
+        fields = ['feedback_id', 'order', 'order_number', 'user_name', 'rating', 'satisfaction_level', 'comments', 'created_at']
+        read_only_fields = ['feedback_id', 'created_at', 'user_name', 'order_number']
 
     def validate_rating(self, value):
         if value < 1 or value > 5:
