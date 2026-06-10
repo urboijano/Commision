@@ -13,6 +13,9 @@
         <div class="main-header">
           <div class="brand-mark">KaonISU <i data-lucide="utensils-crossed" class="brand-icon"></i></div>
           <div class="welcome-actions">
+            <a href="/orders/" class="icon-btn" title="My Orders">
+              <i data-lucide="clipboard-list"></i>
+            </a>
             <div style="position:relative;">
               <button class="icon-btn" id="profileBtn" title="Profile" style="border:none;background:none;cursor:pointer;">
                 <i data-lucide="user"></i>
@@ -309,5 +312,6 @@ document.getElementById('profileDropdown')?.addEventListener('click', function(e
 });
 
 loadCart();
+lucide.createIcons();
 </script>
 {% endblock %}

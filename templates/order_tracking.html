@@ -1,21 +1,101 @@
 {% extends 'base.html' %}
-{% block title %}Track Order - Food Ordering{% endblock %}
+{% block title %}Track Order - KaonISU{% endblock %}
 {% block content %}
-<div id="trackingContent">
-    <div class="text-center py-5">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="mt-2">Loading order status...</p>
+<style>
+  .navbar { display: none !important; }
+  body > .container, body .py-4 { max-width: none; padding: 0 !important; }
+</style>
+<div class="landing-bg">
+  <div class="landing-grid">
+    <div class="landing-main">
+      <div class="main-container">
+
+        <div class="main-header">
+          <div class="brand-mark">KaonISU <i data-lucide="utensils-crossed" class="brand-icon"></i></div>
+          <div class="welcome-actions">
+            <a href="/orders/" class="icon-btn" title="My Orders">
+              <i data-lucide="clipboard-list"></i>
+            </a>
+            <div style="position:relative;">
+              <button class="icon-btn" id="profileBtn" title="Profile" style="border:none;background:none;cursor:pointer;">
+                <i data-lucide="user"></i>
+              </button>
+              <div id="profileDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);padding:1rem;min-width:220px;z-index:1100;">
+                <div style="font-size:0.85rem;font-weight:700;color:#1a1a1a;margin-bottom:0.25rem;">{{ user.full_name }}</div>
+                {% if user.student_faculty_id %}
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.15rem;">ID: {{ user.student_faculty_id }}</div>
+                {% endif %}
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.75rem;word-break:break-all;"><strong style="color:#374151;">Email:</strong> {{ user.email }}</div>
+                {% if user.user_type == 'admin' or user.user_type == 'store_owner' %}
+                <a href="{% if user.user_type == 'admin' %}/kaon-admin/{% else %}/dashboard/{% endif %}" style="display:block;padding:0.5rem;border-radius:8px;background:#f3f4f6;color:#1a1a1a;font-size:0.8rem;font-weight:600;text-decoration:none;text-align:center;transition:background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">Dashboard</a>
+                {% else %}
+                <button onclick="handleLogout()" style="display:block;width:100%;padding:0.5rem;border:none;border-radius:8px;background:#fee2e2;color:#dc2626;font-size:0.8rem;font-weight:600;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">Logout</button>
+                {% endif %}
+              </div>
+            </div>
+            <a href="/cart/" class="cart-btn" id="cartBtn">
+              <i data-lucide="shopping-cart"></i>
+              <span class="cart-count-dot" id="cartCountBadge">0</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="main-body">
+          <div id="trackingContent">
+            <div style="width:100%;text-align:center;padding:2rem;">
+              <div class="spinner-border" style="width:2rem;height:2rem;color:#1a1a1a;" role="status"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
+
+    <div class="landing-sidebar" style="position:sticky;top:1rem;">
+      <div class="sidebar-card" id="orderSummarySidebar">
+        <div style="display:flex;align-items:center;gap:0.5rem;font-weight:700;font-size:0.9rem;margin-bottom:0.75rem;">
+          <i data-lucide="receipt" style="width:18px;height:18px;color:#ccff00;"></i>
+          <span>Order Summary</span>
+        </div>
+        <div id="sidebarItems" style="margin-bottom:0.75rem;">
+          <p style="font-size:0.8rem;color:#9ca3af;margin:0;">Loading...</p>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.85rem;font-weight:700;padding-top:0.6rem;border-top:1px solid #f3f4f6;">
+          <span>Total</span>
+          <span id="sidebarTotal" style="color:#1a1a1a;">—</span>
+        </div>
+      </div>
+
+      <div class="sidebar-card" style="padding:1.25rem;">
+        <div style="display:flex;flex-direction:column;gap:0.4rem;">
+          <a href="/orders/" style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;border-radius:12px;text-decoration:none;color:#374151;font-size:0.85rem;font-weight:600;transition:background 0.2s;"
+            onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
+            <div style="width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="clipboard-list" style="width:16px;height:16px;color:#1a1a1a;"></i>
+            </div>
+            All Orders
+          </a>
+          <a href="/menu/" style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;border-radius:12px;text-decoration:none;color:#374151;font-size:0.85rem;font-weight:600;transition:background 0.2s;"
+            onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
+            <div style="width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="utensils" style="width:16px;height:16px;color:#1a1a1a;"></i>
+            </div>
+            Browse Menu
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1060;">
-    <div id="statusToast" class="toast" role="alert">
-        <div class="toast-body d-flex align-items-center">
-            <i class="bi bi-bell-fill text-warning me-2"></i>
-            <span id="statusToastMsg">Status updated!</span>
-            <button type="button" class="btn-close ms-2" data-bs-dismiss="toast"></button>
-        </div>
+  <div id="statusToast" class="toast" role="alert" style="border-radius:12px;">
+    <div class="toast-body d-flex align-items-center">
+      <i data-lucide="bell" style="width:18px;height:18px;color:#ccff00;margin-right:0.5rem;"></i>
+      <span id="statusToastMsg" style="font-size:0.85rem;">Status updated!</span>
+      <button type="button" class="btn-close ms-2" data-bs-dismiss="toast"></button>
     </div>
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}
@@ -25,144 +105,215 @@ let ws = null;
 let statusCheckInterval = null;
 
 const STATUS_ORDER = ['received', 'preparing', 'ready_for_pickup', 'completed'];
-const STATUS_LABELS = {
-    received: 'Order Received',
-    preparing: 'Preparing',
-    ready_for_pickup: 'Ready for Pick-Up',
-    completed: 'Completed',
-    cancelled: 'Cancelled'
+const STATUS_META = {
+  received:       { label: 'Order Received',      color: '#6b7280', icon: 'check-circle' },
+  preparing:      { label: 'Preparing',            color: '#c2410c', icon: 'cooking-pot' },
+  ready_for_pickup: { label: 'Ready for Pick-Up',  color: '#16a34a', icon: 'bell' },
+  completed:      { label: 'Completed',            color: '#16a34a', icon: 'check-check' },
+  cancelled:      { label: 'Cancelled',            color: '#dc2626', icon: 'x-circle' }
 };
-const STATUS_ICONS = {
-    received: 'bi-check-circle',
-    preparing: 'bi-gear',
-    ready_for_pickup: 'bi-bell',
-    completed: 'bi-check-all'
-};
+
+function getItemBg(name) {
+  const colors = ['#e8f5e9', '#fff3e0', '#fce4ec', '#e3f2fd', '#f3e5f5', '#e0f7fa', '#fff8e1', '#fbe9e7'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function getItemIcon(category) {
+  const map = { rice: 'wheat', noodles: 'utensils-crossed', drinks: 'cup-soda', snacks: 'popcorn', desserts: 'cake-slice' };
+  return map[category] || 'coffee';
+}
 
 async function loadTracking() {
-    const data = await apiGet(`/api/orders/${orderId}/track/`);
-    const container = document.getElementById('trackingContent');
+  const [trackData, orderData] = await Promise.all([
+    apiGet(`/api/orders/${orderId}/track/`),
+    apiGet(`/api/orders/${orderId}/`)
+  ]);
+  const container = document.getElementById('trackingContent');
 
-    if (!data) {
-        container.innerHTML = '<div class="alert alert-danger">Failed to load tracking info.</div>';
-        return;
+  if (!trackData) {
+    container.innerHTML = '<div style="text-align:center;padding:3rem;color:#ef4444;font-weight:600;">Failed to load tracking info.</div>';
+    return;
+  }
+
+  const currentIdx = STATUS_ORDER.indexOf(trackData.current_status);
+  const isCancelled = trackData.current_status === 'cancelled';
+
+  const stepsHtml = STATUS_ORDER.map((status, idx) => {
+    let stateClass = '';
+    if (isCancelled) {
+      stateClass = idx <= currentIdx ? 'completed' : '';
+    } else {
+      if (idx < currentIdx || trackData.current_status === 'completed') stateClass = 'completed';
+      else if (idx === currentIdx) stateClass = 'active';
     }
-
-    const currentIdx = STATUS_ORDER.indexOf(data.current_status);
-    const stepsHtml = STATUS_ORDER.map((status, idx) => {
-        let stateClass = '';
-        if (idx < currentIdx || data.current_status === 'completed') stateClass = 'completed';
-        else if (idx === currentIdx) stateClass = 'active';
-        const icon = STATUS_ICONS[status] || 'bi-circle';
-        return `
-            <div class="col step ${stateClass}">
-                <div class="step-icon">
-                    <i class="bi ${icon}"></i>
-                </div>
-                <div class="step-label">${STATUS_LABELS[status]}</div>
-            </div>
-        `;
-    }).join('');
-
-    container.innerHTML = `
-        <div class="text-center mb-4">
-            <h4><i class="bi bi-geo-alt"></i> Track Your Order</h4>
-            <div class="order-number-display mt-2">${data.order_number}</div>
+    const meta = STATUS_META[status] || { label: status, icon: 'circle' };
+    const stepColor = stateClass === 'completed' ? '#22c55e' : stateClass === 'active' ? '#1a1a1a' : '#d1d5db';
+    return `
+      <div style="flex:1;text-align:center;position:relative;">
+        <div style="width:44px;height:44px;border-radius:50%;background:${stateClass === 'completed' ? '#dcfce7' : stateClass === 'active' ? '#ccff00' : '#f3f4f6'};display:flex;align-items:center;justify-content:center;margin:0 auto 0.4rem;transition:all 0.3s;position:relative;z-index:2;">
+          <i data-lucide="${meta.icon}" style="width:18px;height:18px;color:${stepColor};"></i>
         </div>
-
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-body">
-                <div class="status-stepper">
-                    <div class="row g-0">
-                        ${stepsHtml}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        ${data.current_status === 'ready_for_pickup' ? `
-            <div class="alert alert-success text-center fs-5">
-                <i class="bi bi-bell-fill"></i>
-                Your order is ready for pick-up! Please proceed to the pick-up area
-                and present your order number. Pay cash on pick-up.
-            </div>
+        <div style="font-size:0.72rem;font-weight:${stateClass ? '700' : '500'};color:${stateClass === 'active' ? '#1a1a1a' : stateClass === 'completed' ? '#22c55e' : '#9ca3af'};transition:color 0.3s;">${meta.label}</div>
+        ${idx < STATUS_ORDER.length - 1 ? `
+          <div style="position:absolute;top:22px;left:calc(50% + 28px);right:calc(-50% + 28px);height:2px;background:${stateClass === 'completed' || (idx < currentIdx) ? '#22c55e' : stateClass === 'active' && currentIdx > idx ? '#22c55e' : stateClass === 'completed' ? '#22c55e' : '#e5e7eb'};z-index:1;"></div>
         ` : ''}
-
-        ${data.current_status === 'completed' ? `
-            <div class="alert alert-info text-center">
-                <i class="bi bi-check-all"></i> Order completed! Please leave a feedback.
-                <a href="/order/${orderId}/feedback/" class="btn btn-primary btn-sm ms-2">
-                    Rate Your Experience
-                </a>
-            </div>
-        ` : ''}
-
-        <div class="text-center mt-3">
-            <a href="/orders/" class="btn btn-outline-primary">
-                <i class="bi bi-list"></i> All Orders
-            </a>
-            ${data.current_status === 'completed' ? `
-                <a href="/order/${orderId}/feedback/" class="btn btn-primary">
-                    <i class="bi bi-star"></i> Rate Your Experience
-                </a>
-            ` : ''}
-        </div>
-
-        <div class="card shadow-sm border-0 mt-4">
-            <div class="card-header bg-white">
-                <h6 class="mb-0"><i class="bi bi-clock-history"></i> Status History</h6>
-            </div>
-            <div class="card-body p-0">
-                <ul class="list-group list-group-flush">
-                    ${data.status_history.length > 0 ? data.status_history.map(h => `
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><strong>${STATUS_LABELS[h.status] || h.status}</strong></span>
-                            <small class="text-muted">${new Date(h.changed_at).toLocaleString()}</small>
-                        </li>
-                    `).join('') : '<li class="list-group-item text-muted">No history</li>'}
-                </ul>
-            </div>
-        </div>
+      </div>
     `;
+  }).join('');
+
+  const statusMeta = STATUS_META[trackData.current_status] || { label: trackData.current_status, color: '#6b7280' };
+
+  const statusHistoryHtml = trackData.status_history.length > 0 ? trackData.status_history.map(h => {
+    const sm = STATUS_META[h.status] || { label: h.status, icon: 'circle' };
+    const dt = new Date(h.changed_at);
+    const timeStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return `
+      <div style="display:flex;align-items:center;gap:0.65rem;padding:0.55rem 0;${h !== trackData.status_history[trackData.status_history.length - 1] ? 'border-bottom:1px solid #f9fafb;' : ''}">
+        <div style="width:32px;height:32px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i data-lucide="${sm.icon}" style="width:14px;height:14px;color:#6b7280;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.82rem;font-weight:600;color:#1a1a1a;">${sm.label}</div>
+          <div style="font-size:0.72rem;color:#9ca3af;">by ${h.changed_by}</div>
+        </div>
+        <span style="font-size:0.72rem;color:#9ca3af;white-space:nowrap;">${timeStr}</span>
+      </div>
+    `;
+  }).join('') : '<div style="font-size:0.8rem;color:#9ca3af;text-align:center;padding:1rem 0;">No status history yet.</div>';
+
+  container.innerHTML = `
+    <div style="text-align:center;margin-bottom:1.25rem;">
+      <h4 style="font-size:1.15rem;font-weight:700;margin-bottom:0.3rem;color:#1a1a1a;">Track Your Order</h4>
+      <div style="font-size:1.6rem;font-weight:800;letter-spacing:0.1em;color:#1a1a1a;">#${trackData.order_number}</div>
+    </div>
+
+    <div style="background:#fff;border-radius:14px;padding:1.25rem 1rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      ${isCancelled ? `
+        <div style="text-align:center;padding:0.5rem 0;">
+          <div style="width:48px;height:48px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem;">
+            <i data-lucide="x-circle" style="width:24px;height:24px;color:#dc2626;"></i>
+          </div>
+          <div style="font-weight:700;font-size:1rem;color:#dc2626;margin-bottom:0.2rem;">Order Cancelled</div>
+          <div style="font-size:0.82rem;color:#6b7280;">This order has been cancelled.</div>
+        </div>
+      ` : `
+        <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;">
+          ${stepsHtml}
+        </div>
+        ${trackData.current_status === 'ready_for_pickup' ? `
+          <div style="display:flex;align-items:center;gap:0.6rem;padding:0.75rem 1rem;border-radius:12px;background:#f0fdf4;margin-bottom:0.5rem;">
+            <i data-lucide="bell" style="width:20px;height:20px;color:#16a34a;flex-shrink:0;"></i>
+            <div style="font-size:0.85rem;font-weight:600;color:#16a34a;">Your order is ready for pick-up! Head to the pick-up area and present your order number. Pay cash on pick-up.</div>
+          </div>
+        ` : ''}
+        ${trackData.current_status === 'completed' ? `
+          <div style="display:flex;align-items:center;gap:0.6rem;padding:0.75rem 1rem;border-radius:12px;background:#f0fdf4;margin-bottom:0.5rem;">
+            <i data-lucide="check-check" style="width:20px;height:20px;color:#16a34a;flex-shrink:0;"></i>
+            <div style="font-size:0.85rem;color:#16a34a;font-weight:600;">Order completed!</div>
+          </div>
+        ` : ''}
+      `}
+    </div>
+
+    <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+      <a href="/orders/" style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.5rem 1rem;border:none;border-radius:999px;background:#f3f4f6;color:#374151;font-size:0.8rem;font-weight:600;text-decoration:none;transition:background 0.2s;"
+        onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+        <i data-lucide="clipboard-list" style="width:14px;height:14px;"></i> All Orders
+      </a>
+      ${trackData.current_status === 'completed' ? `
+        <a href="/order/${orderId}/feedback/" style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.5rem 1rem;border:none;border-radius:999px;background:#1a1a1a;color:#fff;font-size:0.8rem;font-weight:700;text-decoration:none;transition:background 0.2s;"
+          onmouseover="this.style.background='#333'" onmouseout="this.style.background='#1a1a1a'">
+          <i data-lucide="star" style="width:14px;height:14px;"></i> Rate Your Experience
+        </a>
+      ` : ''}
+    </div>
+
+    <div style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <div style="display:flex;align-items:center;gap:0.5rem;padding:0.85rem 1rem;border-bottom:1px solid #f9fafb;">
+        <i data-lucide="clock" style="width:16px;height:16px;color:#ccff00;"></i>
+        <span style="font-weight:700;font-size:0.85rem;color:#1a1a1a;">Status History</span>
+      </div>
+      <div style="padding:0.5rem 1rem;">
+        ${statusHistoryHtml}
+      </div>
+    </div>
+  `;
+
+  lucide.createIcons();
+
+  if (orderData && orderData.items) {
+    document.getElementById('sidebarTotal').textContent = `₱${parseFloat(orderData.total_amount).toFixed(2)}`;
+    document.getElementById('sidebarItems').innerHTML = orderData.items.map(item => `
+      <div style="display:flex;align-items:center;gap:0.5rem;padding:0.35rem 0;">
+        <div style="width:28px;height:28px;border-radius:6px;background:${getItemBg(item.item_name)};display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+          ${item.item_image ? `<img src="${item.item_image}" alt="${item.item_name}" style="width:100%;height:100%;object-fit:cover;">` : `<i data-lucide="${getItemIcon(item.category || '')}" style="width:12px;height:12px;color:#6b7280;"></i>`}
+        </div>
+        <span style="font-size:0.8rem;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">${item.item_name}</span>
+        <span style="font-size:0.75rem;color:#9ca3af;margin-left:auto;">x${item.quantity}</span>
+      </div>
+    `).join('');
+    lucide.createIcons();
+  }
 }
 
 function connectWebSocket() {
-    const token = getToken();
-    if (!token) return;
+  const token = getToken();
+  if (!token) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/orders/`;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws/orders/`;
 
-    try {
-        ws = new WebSocket(wsUrl);
+  try {
+    ws = new WebSocket(wsUrl);
 
-        ws.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            if (data.order_id === orderId || data.order_number) {
-                loadTracking();
-                showStatusToast(data.message || 'Order status updated!');
-            }
-        };
+    ws.onmessage = function(event) {
+      const data = JSON.parse(event.data);
+      if (data.order_id === orderId || data.order_number) {
+        loadTracking();
+        showStatusToast(data.message || 'Order status updated!');
+      }
+    };
 
-        ws.onclose = function() {
-            setTimeout(connectWebSocket, 3000);
-        };
-    } catch (e) {
-        console.log('WebSocket not available, using polling');
-    }
+    ws.onclose = function() {
+      setTimeout(connectWebSocket, 3000);
+    };
+  } catch (e) {
+    console.log('WebSocket not available, using polling');
+  }
 }
 
 function showStatusToast(msg) {
-    document.getElementById('statusToastMsg').textContent = msg;
-    const toast = new bootstrap.Toast(document.getElementById('statusToast'), { delay: 4000 });
-    toast.show();
+  document.getElementById('statusToastMsg').textContent = msg;
+  const toast = new bootstrap.Toast(document.getElementById('statusToast'), { delay: 4000 });
+  toast.show();
+}
+
+document.getElementById('profileBtn')?.addEventListener('click', function(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('profileDropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+});
+document.addEventListener('click', function() {
+  const dd = document.getElementById('profileDropdown');
+  if (dd) dd.style.display = 'none';
+});
+document.getElementById('profileDropdown')?.addEventListener('click', function(e) {
+  e.stopPropagation();
+});
+
+async function handleLogout() {
+  await apiPost('/api/auth/logout/', {});
+  clearTokens();
+  window.location.href = '/';
 }
 
 loadTracking();
 
 if (isAuthenticated()) {
-    connectWebSocket();
-    statusCheckInterval = setInterval(loadTracking, 15000);
+  connectWebSocket();
+  statusCheckInterval = setInterval(loadTracking, 15000);
 }
 </script>
 {% endblock %}

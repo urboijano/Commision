@@ -334,7 +334,7 @@ def clear_cart(request):
 @permission_classes([IsAuthenticated])
 def place_order(request):
     cart = get_object_or_404(Cart, user=request.user)
-    cart_items = CartItem.objects.filter(cart=cart).select_related('item')
+    cart_items = CartItem.objects.filter(cart=cart).select_related('item__store_owner')
 
     if not cart_items.exists():
         return Response(
@@ -348,6 +348,14 @@ def place_order(request):
                 {'error': f'{ci.item.name} is no longer available.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        if ci.item.stock < ci.quantity:
+            return Response(
+                {'error': f'Not enough stock for {ci.item.name}. Available: {ci.item.stock}, requested: {ci.quantity}.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    first_item = cart_items.first().item
+    store_name = first_item.store_owner.store_name.strip() if first_item.store_owner and first_item.store_owner.store_name.strip() else 'Store'
 
     with transaction.atomic():
         total = sum(ci.item.price * ci.quantity for ci in cart_items)
@@ -366,10 +374,13 @@ def place_order(request):
                 subtotal=ci.item.price * ci.quantity,
             )
 
+            ci.item.stock -= ci.quantity
+            ci.item.save()
+
         OrderStatusHistory.objects.create(
             order=order,
             status='received',
-            changed_by='customer',
+            changed_by=store_name,
         )
 
         cart.items.all().delete()
@@ -568,6 +579,7 @@ def store_update_order_status(request, order_id):
     valid_transitions = {
         'received': ['preparing'],
         'preparing': ['ready_for_pickup'],
+        'ready_for_pickup': ['completed'],
     }
 
     if order.status != status_val:

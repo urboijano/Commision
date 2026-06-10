@@ -1,70 +1,214 @@
 {% extends 'base.html' %}
-{% block title %}My Orders - Food Ordering{% endblock %}
+{% block title %}My Orders - KaonISU{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0"><i class="bi bi-box"></i> My Orders</h3>
-    <a href="/menu/" class="btn btn-primary">
-        <i class="bi bi-plus-circle"></i> New Order
-    </a>
-</div>
+<style>
+  .navbar { display: none !important; }
+  body > .container, body .py-4 { max-width: none; padding: 0 !important; }
+</style>
+<div class="landing-bg">
+  <div class="landing-grid">
+    <div class="landing-main">
+      <div class="main-container">
 
-<div id="ordersContent">
-    <div class="text-center py-5">
-        <div class="spinner-border text-primary" role="status"></div>
+        <div class="main-header">
+          <div class="brand-mark">KaonISU <i data-lucide="utensils-crossed" class="brand-icon"></i></div>
+          <div class="welcome-actions">
+            <a href="/orders/" class="icon-btn" title="My Orders">
+              <i data-lucide="clipboard-list"></i>
+            </a>
+            <div style="position:relative;">
+              <button class="icon-btn" id="profileBtn" title="Profile" style="border:none;background:none;cursor:pointer;">
+                <i data-lucide="user"></i>
+              </button>
+              <div id="profileDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);padding:1rem;min-width:220px;z-index:1100;">
+                <div style="font-size:0.85rem;font-weight:700;color:#1a1a1a;margin-bottom:0.25rem;">{{ user.full_name }}</div>
+                {% if user.student_faculty_id %}
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.15rem;">ID: {{ user.student_faculty_id }}</div>
+                {% endif %}
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.75rem;word-break:break-all;"><strong style="color:#374151;">Email:</strong> {{ user.email }}</div>
+                {% if user.user_type == 'admin' or user.user_type == 'store_owner' %}
+                <a href="{% if user.user_type == 'admin' %}/kaon-admin/{% else %}/dashboard/{% endif %}" style="display:block;padding:0.5rem;border-radius:8px;background:#f3f4f6;color:#1a1a1a;font-size:0.8rem;font-weight:600;text-decoration:none;text-align:center;transition:background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">Dashboard</a>
+                {% else %}
+                <button onclick="handleLogout()" style="display:block;width:100%;padding:0.5rem;border:none;border-radius:8px;background:#fee2e2;color:#dc2626;font-size:0.8rem;font-weight:600;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">Logout</button>
+                {% endif %}
+              </div>
+            </div>
+            <a href="/cart/" class="cart-btn" id="cartBtn">
+              <i data-lucide="shopping-cart"></i>
+              <span class="cart-count-dot" id="cartCountBadge">0</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="main-body">
+          <div class="section-header">
+            <h5><i data-lucide="clipboard-list" style="width:18px;height:18px;color:#ccff00;margin-right:0.35rem;"></i> My Orders</h5>
+            <a href="/menu/" class="section-link">Browse Menu <i data-lucide="plus" style="width:14px;height:14px;"></i></a>
+          </div>
+
+          <div id="ordersContent">
+            <div style="width:100%;text-align:center;padding:2rem;">
+              <div class="spinner-border" style="width:2rem;height:2rem;color:#1a1a1a;" role="status"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
+
+    <div class="landing-sidebar" style="position:sticky;top:1rem;">
+      <div class="sidebar-card" style="padding:1.25rem;">
+        <div style="display:flex;flex-direction:column;gap:0.4rem;">
+          <a href="/menu/" style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;border-radius:12px;text-decoration:none;color:#374151;font-size:0.85rem;font-weight:600;transition:background 0.2s;"
+            onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
+            <div style="width:36px;height:36px;border-radius:10px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="utensils" style="width:16px;height:16px;color:#1a1a1a;"></i>
+            </div>
+            Browse Menu
+          </a>
+          <a href="/orders/" style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.75rem;border-radius:12px;text-decoration:none;color:#1a1a1a;font-size:0.85rem;font-weight:700;background:#f3f4f6;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#ccff00;display:flex;align-items:center;justify-content:center;">
+              <i data-lucide="clipboard-list" style="width:16px;height:16px;color:#1a1a1a;"></i>
+            </div>
+            My Orders
+          </a>
+        </div>
+      </div>
+
+      <div class="sidebar-card promo-sidebar" style="padding:1.25rem;flex:none;">
+        <div class="promo-sidebar-badge">KaonISU</div>
+        <h5>Hungry Again?</h5>
+        <p>Craving something else? Check out the menu and place a new order.</p>
+        <a href="/menu/" class="promo-sidebar-btn">Order Now</a>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
+function getItemBg(name) {
+  const colors = ['#e8f5e9', '#fff3e0', '#fce4ec', '#e3f2fd', '#f3e5f5', '#e0f7fa', '#fff8e1', '#fbe9e7'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function getItemIcon(category) {
+  const map = { rice: 'wheat', noodles: 'utensils-crossed', drinks: 'cup-soda', snacks: 'popcorn', desserts: 'cake-slice' };
+  return map[category] || 'coffee';
+}
+
+const STATUS_META = {
+  received:       { label: 'Order Received',      color: '#6b7280', icon: 'check-circle' },
+  preparing:      { label: 'Preparing',            color: '#c2410c', icon: 'cooking-pot' },
+  ready_for_pickup: { label: 'Ready for Pick-Up',  color: '#16a34a', icon: 'bell' },
+  completed:      { label: 'Completed',            color: '#16a34a', icon: 'check-check' },
+  cancelled:      { label: 'Cancelled',            color: '#dc2626', icon: 'x-circle' }
+};
+
 async function loadOrders() {
-    const data = await apiGet('/api/orders/');
-    const container = document.getElementById('ordersContent');
+  const data = await apiGet('/api/orders/');
+  const container = document.getElementById('ordersContent');
 
-    if (!data || data.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-5">
-                <i class="bi bi-inbox" style="font-size:4rem;color:#dee2e6;"></i>
-                <h5 class="mt-3 text-muted">No orders yet</h5>
-                <a href="/menu/" class="btn btn-primary mt-3">
-                    <i class="bi bi-menu-app"></i> Browse Menu
-                </a>
-            </div>
-        `;
-        return;
-    }
+  if (!data || data.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:3rem 1rem;">
+        <i data-lucide="package" style="width:64px;height:64px;color:#d1d5db;margin-bottom:1rem;"></i>
+        <h5 style="font-size:1.1rem;font-weight:700;color:#374151;margin-bottom:0.25rem;">No orders yet</h5>
+        <p style="font-size:0.85rem;color:#6b7280;margin-bottom:1.25rem;">Looks like you haven't placed any orders yet.</p>
+        <a href="/menu/" style="display:inline-block;padding:0.65rem 1.5rem;border:none;border-radius:999px;background:#1a1a1a;color:#fff;font-size:0.85rem;font-weight:700;text-decoration:none;transition:background 0.2s,transform 0.2s;"
+          onmouseover="this.style.background='#333';this.style.transform='translateY(-1px)'"
+          onmouseout="this.style.background='#1a1a1a';this.style.transform=''">
+          Browse Menu <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+        </a>
+      </div>
+    `;
+    lucide.createIcons();
+    return;
+  }
 
-    container.innerHTML = data.map(order => `
-        <div class="card shadow-sm border-0 mb-3">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h5 class="mb-1">Order #${order.order_number}</h5>
-                        <small class="text-muted">${new Date(order.created_at).toLocaleString()}</small>
-                    </div>
-                    <span class="badge bg-${order.status === 'completed' ? 'success' : order.status === 'ready_for_pickup' ? 'warning' : order.status === 'preparing' ? 'info' : 'secondary'} fs-6">
-                        ${order.status_display || order.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </span>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between">
-                    <span>${order.items.length} item(s)</span>
-                    <span class="fw-bold">₱${parseFloat(order.total_amount).toFixed(2)}</span>
-                </div>
-                <div class="mt-2">
-                    <a href="/order/${order.order_id}/track/" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-geo-alt"></i> Track
-                    </a>
-                    ${order.status === 'completed' ? `
-                        <a href="/order/${order.order_id}/feedback/" class="btn btn-sm btn-outline-warning">
-                            <i class="bi bi-star"></i> Feedback
-                        </a>
-                    ` : ''}
-                </div>
-            </div>
+  container.innerHTML = data.map(order => {
+    const meta = STATUS_META[order.status] || { label: order.status, color: '#6b7280', icon: 'circle' };
+    const count = order.items.length;
+
+    return `
+      <div style="background:#fff;border-radius:14px;margin-bottom:0.65rem;padding:1rem 1.15rem;box-shadow:0 1px 3px rgba(0,0,0,0.04);transition:box-shadow 0.2s;"
+        onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)'"
+        onmouseout="this.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)'">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;margin-bottom:0.6rem;">
+          <div style="display:flex;align-items:center;gap:0.6rem;min-width:0;">
+            <div style="font-weight:800;font-size:1rem;color:#1a1a1a;letter-spacing:0.02em;">#${order.order_number}</div>
+          </div>
+          <span style="font-size:0.72rem;color:${meta.color};font-weight:600;white-space:nowrap;">${meta.label}</span>
         </div>
-    `).join('');
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
+          <span style="font-size:0.78rem;color:#9ca3af;">${new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })} · ${count} item${count !== 1 ? 's' : ''}</span>
+          <span style="font-weight:800;font-size:1.05rem;color:#1a1a1a;">₱${parseFloat(order.total_amount).toFixed(2)}</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.75rem;padding:0.5rem 0;border-top:1px solid #f9fafb;border-bottom:1px solid #f9fafb;">
+          ${order.items.map(item => `
+            <div style="display:flex;align-items:center;gap:0.45rem;padding:0.3rem 0.65rem 0.3rem 0.3rem;border-radius:999px;background:#f9fafb;font-size:0.75rem;">
+              <div style="width:24px;height:24px;border-radius:50%;background:${getItemBg(item.item_name)};display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+                ${item.item_image ? `<img src="${item.item_image}" alt="${item.item_name}" style="width:100%;height:100%;object-fit:cover;">` : `<i data-lucide="${getItemIcon(item.category || '')}" style="width:12px;height:12px;color:#6b7280;"></i>`}
+              </div>
+              <span style="font-weight:600;color:#374151;">${item.item_name}</span>
+              <span style="color:#9ca3af;">x${item.quantity}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div style="display:flex;gap:0.4rem;">
+          <a href="/order/${order.order_id}/track/" style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.4rem 0.85rem;border:none;border-radius:999px;background:#f3f4f6;color:#374151;font-size:0.78rem;font-weight:600;text-decoration:none;transition:background 0.2s;"
+            onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+            <i data-lucide="map-pin" style="width:13px;height:13px;"></i> Track Order
+          </a>
+          ${order.status === 'completed' ? `
+            <a href="/order/${order.order_id}/feedback/" style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.4rem 0.85rem;border:none;border-radius:999px;background:#fef3c7;color:#d97706;font-size:0.78rem;font-weight:600;text-decoration:none;transition:background 0.2s;"
+              onmouseover="this.style.background='#fde68a'" onmouseout="this.style.background='#fef3c7'">
+              <i data-lucide="star" style="width:13px;height:13px;"></i> Feedback
+            </a>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  lucide.createIcons();
+}
+
+async function updateCartBadge() {
+  const data = await apiGet('/api/cart/');
+  if (data) {
+    const badge = document.getElementById('cartCountBadge');
+    if (badge) {
+      const count = data.total_items || 0;
+      badge.textContent = count;
+      badge.style.display = count > 0 ? 'flex' : 'none';
+    }
+  }
+}
+
+document.getElementById('profileBtn')?.addEventListener('click', function(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('profileDropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+});
+document.addEventListener('click', function() {
+  const dd = document.getElementById('profileDropdown');
+  if (dd) dd.style.display = 'none';
+});
+document.getElementById('profileDropdown')?.addEventListener('click', function(e) {
+  e.stopPropagation();
+});
+
+async function handleLogout() {
+  await apiPost('/api/auth/logout/', {});
+  clearTokens();
+  window.location.href = '/';
 }
 
 loadOrders();
+updateCartBadge();
+lucide.createIcons();
 </script>
 {% endblock %}

@@ -289,6 +289,9 @@ function renderOrders() {
           (order.status === 'preparing'
             ? '<button class="btn btn-sm" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'ready_for_pickup\')"><i data-lucide="check" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Ready</button>'
             : '') +
+          (order.status === 'ready_for_pickup'
+            ? '<button class="btn btn-sm" style="background:#1a1a1a;color:#fff;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'completed\')"><i data-lucide="check-check" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Complete</button>'
+            : '') +
         '</div>' +
       '</div>' +
     '</div>';
@@ -344,6 +347,9 @@ function renderOverview() {
           : '') +
         (order.status === 'preparing'
           ? '<button class="btn btn-sm mt-1" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'ready_for_pickup\')"><i data-lucide="check" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Ready</button>'
+          : '') +
+        (order.status === 'ready_for_pickup'
+          ? '<button class="btn btn-sm mt-1" style="background:#1a1a1a;color:#fff;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'completed\')"><i data-lucide="check-check" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Complete</button>'
           : '') +
       '</div>' +
     '</div>';

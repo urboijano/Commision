@@ -176,9 +176,12 @@ class UpdateCartItemSerializer(serializers.Serializer):
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
+    item_image = serializers.URLField(source='item.image_url', read_only=True, default='')
+    category = serializers.CharField(source='item.category', read_only=True, default='')
+
     class Meta:
         model = OrderItem
-        fields = ['order_item_id', 'item_name', 'unit_price', 'quantity', 'subtotal']
+        fields = ['order_item_id', 'item_name', 'unit_price', 'quantity', 'subtotal', 'item_image', 'category']
 
 
 class OrderStatusHistorySerializer(serializers.ModelSerializer):
