@@ -379,7 +379,7 @@ def place_order(request):
 
         OrderStatusHistory.objects.create(
             order=order,
-            status='received',
+            status='pending',
             changed_by=store_name,
         )
 
@@ -526,6 +526,7 @@ def force_order_status(request, order_id):
     order = get_object_or_404(Order, order_id=order_id)
 
     valid_transitions = {
+        'pending': ['received'],
         'received': ['preparing'],
         'preparing': ['ready_for_pickup'],
         'ready_for_pickup': ['completed'],
@@ -577,6 +578,7 @@ def store_update_order_status(request, order_id):
     order = get_object_or_404(Order, order_id=order_id)
 
     valid_transitions = {
+        'pending': ['received'],
         'received': ['preparing'],
         'preparing': ['ready_for_pickup'],
         'ready_for_pickup': ['completed'],

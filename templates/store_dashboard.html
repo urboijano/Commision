@@ -126,6 +126,10 @@
       <div class="card" style="margin-top:1rem;">
         <div class="card-header">
           <h5>Incoming Orders</h5>
+          <div style="flex:1;min-width:140px;max-width:240px;margin-left:auto;position:relative;">
+            <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#9ca3af;pointer-events:none;"></i>
+            <input type="text" id="overviewSearch" placeholder="Search orders..." style="width:100%;padding:0.35rem 0.7rem 0.35rem 1.7rem;border-radius:2rem;border:1px solid #e5e7eb;font-size:0.75rem;outline:none;background:#f9fafb;">
+          </div>
         </div>
         <div class="card-body" id="overviewOrdersList" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
       </div>
@@ -135,7 +139,11 @@
       <div class="card">
         <div class="card-header">
           <h5>All Orders</h5>
-          <span id="orderCount" class="badge" style="background:#ccff00;color:#1a1a1a;">0</span>
+          <div style="flex:1;min-width:140px;max-width:240px;margin-left:auto;position:relative;">
+            <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#9ca3af;pointer-events:none;"></i>
+            <input type="text" id="ordersSearch" placeholder="Search orders..." style="width:100%;padding:0.35rem 0.7rem 0.35rem 1.7rem;border-radius:2rem;border:1px solid #e5e7eb;font-size:0.75rem;outline:none;background:#f9fafb;">
+          </div>
+          <span id="orderCount" class="badge" style="background:#ccff00;color:#1a1a1a;margin-left:0.5rem;">0</span>
         </div>
         <div class="card-body" id="ordersList" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
       </div>
@@ -240,6 +248,8 @@ let currentOrders = [];
 let currentMenu = [];
 let menuCategoryFilter = '';
 let menuSearchQuery = '';
+let overviewSearchQuery = '';
+let ordersSearchQuery = '';
 
 const pageMeta = {
   overview: ['Overview', 'Store performance summary'],
@@ -249,9 +259,17 @@ const pageMeta = {
 
 function renderOrders() {
   const container = document.getElementById('ordersList');
-  const all = currentOrders.filter(o => o.status !== 'cancelled');
+  const q = ordersSearchQuery.toLowerCase();
+  let all = currentOrders.filter(o => o.status !== 'cancelled');
+  if (q) {
+    all = all.filter(o =>
+      o.order_number.toLowerCase().includes(q) ||
+      (o.user?.full_name && o.user.full_name.toLowerCase().includes(q)) ||
+      o.items.some(i => i.item_name.toLowerCase().includes(q))
+    );
+  }
   if (!all.length) {
-    container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="inbox" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">No orders yet.</p></div>';
+    container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="inbox" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">' + (q ? 'No orders match your search.' : 'No orders yet.') + '</p></div>';
     document.getElementById('orderCount').textContent = '0';
     document.getElementById('statOrders').textContent = '0';
     renderOverview();
@@ -260,7 +278,8 @@ function renderOrders() {
   container.innerHTML = all.map(order => {
     const items = order.items.map(i => i.item_name + ' x' + i.quantity).join(', ');
     const statusMeta = {
-      received: { color: '#f59e0b', bg: '#fef3c7', label: 'Received' },
+      pending: { color: '#f59e0b', bg: '#fef3c7', label: 'Pending' },
+      received: { color: '#6b7280', bg: '#f3f4f6', label: 'Received' },
       preparing: { color: '#3b82f6', bg: '#eff6ff', label: 'Preparing' },
       ready_for_pickup: { color: '#10b981', bg: '#ecfdf5', label: 'Ready for Pickup' },
       completed: { color: '#6b7280', bg: '#f3f4f6', label: 'Completed' },
@@ -283,8 +302,11 @@ function renderOrders() {
           '<strong style="font-size:1rem;color:#1a1a1a;">₱' + parseFloat(order.total_amount).toFixed(2) + '</strong>' +
         '</div>' +
         '<div style="flex-shrink:0;display:flex;flex-direction:column;gap:0.35rem;">' +
+          (order.status === 'pending'
+            ? '<button class="btn btn-sm" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'received\')"><i data-lucide="check" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Accept</button>'
+            : '') +
           (order.status === 'received'
-            ? '<button class="btn btn-sm" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'preparing\')"><i data-lucide="check" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Accept</button>'
+            ? '<button class="btn btn-sm" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'preparing\')"><i data-lucide="check" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Prepare</button>'
             : '') +
           (order.status === 'preparing'
             ? '<button class="btn btn-sm" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'ready_for_pickup\')"><i data-lucide="check" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Ready</button>'
@@ -304,9 +326,17 @@ function renderOrders() {
 
 function renderOverview() {
   const container = document.getElementById('overviewOrdersList');
-  const incoming = currentOrders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
+  const q = overviewSearchQuery.toLowerCase();
+  let incoming = currentOrders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
+  if (q) {
+    incoming = incoming.filter(o =>
+      o.order_number.toLowerCase().includes(q) ||
+      (o.user?.full_name && o.user.full_name.toLowerCase().includes(q)) ||
+      o.items.some(i => i.item_name.toLowerCase().includes(q))
+    );
+  }
   if (!incoming.length) {
-    container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="inbox" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">No incoming orders.</p></div>';
+    container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="inbox" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">' + (q ? 'No orders match your search.' : 'No incoming orders.') + '</p></div>';
     document.getElementById('statRevenue').textContent = '₱' +
       currentOrders
         .filter(o => o.status === 'completed')
@@ -319,9 +349,10 @@ function renderOverview() {
       .filter(o => o.status === 'completed')
       .reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0)
       .toFixed(2);
-  const recent = incoming.slice(0, 5);
+  const recent = incoming;
   const statusMeta = {
-    received: { color: '#f59e0b', bg: '#fef3c7', label: 'Received' },
+    pending: { color: '#f59e0b', bg: '#fef3c7', label: 'Pending' },
+    received: { color: '#6b7280', bg: '#f3f4f6', label: 'Received' },
     preparing: { color: '#3b82f6', bg: '#eff6ff', label: 'Preparing' },
     ready_for_pickup: { color: '#10b981', bg: '#ecfdf5', label: 'Ready for Pickup' },
   };
@@ -342,8 +373,11 @@ function renderOverview() {
       '</div>' +
       '<div style="flex-shrink:0;text-align:right;">' +
         '<strong style="font-size:0.9rem;display:block;">₱' + parseFloat(order.total_amount).toFixed(2) + '</strong>' +
+        (order.status === 'pending'
+          ? '<button class="btn btn-sm mt-1" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'received\')"><i data-lucide="check" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Accept</button>'
+          : '') +
         (order.status === 'received'
-          ? '<button class="btn btn-sm mt-1" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'preparing\')"><i data-lucide="check" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Accept</button>'
+          ? '<button class="btn btn-sm mt-1" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'preparing\')"><i data-lucide="check" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Prepare</button>'
           : '') +
         (order.status === 'preparing'
           ? '<button class="btn btn-sm mt-1" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'ready_for_pickup\')"><i data-lucide="check" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Ready</button>'
@@ -479,6 +513,16 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('menuSearch')?.addEventListener('input', function () {
     menuSearchQuery = this.value;
     renderMenu();
+  });
+
+  document.getElementById('overviewSearch')?.addEventListener('input', function () {
+    overviewSearchQuery = this.value;
+    renderOverview();
+  });
+
+  document.getElementById('ordersSearch')?.addEventListener('input', function () {
+    ordersSearchQuery = this.value;
+    renderOrders();
   });
 
   document.querySelectorAll('.store-nav-item[data-tab]').forEach(item => {
