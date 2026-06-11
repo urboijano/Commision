@@ -631,8 +631,8 @@ def force_order_status(request, order_id):
     order = get_object_or_404(Order, order_id=order_id)
 
     valid_transitions = {
-        'pending': ['received'],
-        'received': ['preparing'],
+        'pending': ['store_accepted'],
+        'store_accepted': ['preparing'],
         'preparing': ['ready_for_pickup'],
         'ready_for_pickup': ['completed'],
     }

@@ -104,10 +104,10 @@ const orderId = '{{ order_id }}';
 let ws = null;
 let statusCheckInterval = null;
 
-const STATUS_ORDER = ['pending', 'received', 'preparing', 'ready_for_pickup', 'completed'];
+const STATUS_ORDER = ['pending', 'store_accepted', 'preparing', 'ready_for_pickup', 'completed'];
 const STATUS_META = {
   pending:        { label: 'Pending Acceptance',   color: '#f59e0b', icon: 'clock' },
-  received:       { label: 'Order Received',      color: '#6b7280', icon: 'check-circle' },
+  store_accepted: { label: 'Accepted by Store',   color: '#6b7280', icon: 'check-circle' },
   preparing:      { label: 'Preparing',            color: '#c2410c', icon: 'cooking-pot' },
   ready_for_pickup: { label: 'Ready for Pick-Up',  color: '#16a34a', icon: 'bell' },
   completed:      { label: 'Completed',            color: '#16a34a', icon: 'check-check' },

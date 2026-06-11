@@ -15,3 +15,7 @@ application = ProtocolTypeRouter({
         URLRouter(websocket_urlpatterns)
     ),
 })
+
+# Serve static files in development
+from django.contrib.staticfiles.handlers import ASGIStaticFilesHandler
+application = ASGIStaticFilesHandler(application)

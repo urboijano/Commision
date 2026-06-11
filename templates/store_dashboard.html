@@ -520,9 +520,9 @@ function renderOverview() {
       '<div style="flex-shrink:0;text-align:right;">' +
         '<strong style="font-size:0.9rem;display:block;">₱' + parseFloat(order.total_amount).toFixed(2) + '</strong>' +
         (order.status === 'pending'
-          ? '<button class="btn btn-sm mt-1" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'received\')"><i data-lucide="check" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Accept</button>'
+          ? '<button class="btn btn-sm mt-1" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'store_accepted\')"><i data-lucide="check" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Accept</button>'
           : '') +
-        (order.status === 'received'
+        (order.status === 'store_accepted'
           ? '<button class="btn btn-sm mt-1" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'preparing\')"><i data-lucide="check" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Prepare</button>'
           : '') +
         (order.status === 'preparing'
