@@ -155,11 +155,21 @@
 
         <div class="card" style="margin:0.75rem 0 0;">
           <div class="card-header">
-            <h5>Pending Student / Faculty Approvals</h5>
-            <span id="pendingUserCount" class="badge" style="background:#3b82f6;color:#fff;">0</span>
+            <h5>Pending Student Approvals</h5>
+            <span id="pendingStudentCount" class="badge" style="background:#16a34a;color:#fff;">0</span>
           </div>
           <div class="card-body" style="padding:0;overflow-x:auto;">
-            <div id="pendingUserList"></div>
+            <div id="pendingStudentList"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin:0.75rem 0 0;">
+          <div class="card-header">
+            <h5>Pending Faculty Approvals</h5>
+            <span id="pendingFacultyCount" class="badge" style="background:#3b82f6;color:#fff;">0</span>
+          </div>
+          <div class="card-body" style="padding:0;overflow-x:auto;">
+            <div id="pendingFacultyList"></div>
           </div>
         </div>
     </div>
@@ -254,6 +264,20 @@
   </div>
 </div>
 
+<div class="modal fade" id="facultyIdModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.12);">
+      <div class="modal-header" style="border-bottom:1px solid #f0f0f0;padding:1.25rem 1.5rem;">
+        <h5 style="font-weight:800;margin:0;font-size:1.1rem;"><i data-lucide="id-card" style="width:18px;height:18px;margin-right:0.5rem;vertical-align:text-bottom;"></i>Faculty ID</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="padding:1.5rem;text-align:center;">
+        <img id="facultyIdModalImage" src="" alt="Faculty ID" style="max-width:100%;max-height:70vh;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 {% block scripts %}
 <script>
@@ -326,38 +350,73 @@ function renderPending() {
 
 
 
-function renderPendingUsers() {
-  const container = document.getElementById('pendingUserList');
-  const pending = adminUsers.filter(u => !u.is_active && u.user_type !== 'store_owner');
-  document.getElementById('pendingUserCount').textContent = pending.length || 0;
+function renderPendingStudents() {
+  const container = document.getElementById('pendingStudentList');
+  const pending = adminUsers.filter(u => !u.is_active && u.user_type === 'student');
+  document.getElementById('pendingStudentCount').textContent = pending.length || 0;
   if (!pending.length) {
-    container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="inbox" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">No pending student or faculty approvals.</p></div>';
+    container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="inbox" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">No pending student approvals.</p></div>';
     return;
   }
   container.innerHTML =
     '<table class="admin-table" style="font-size:0.8rem;">' +
       '<thead>' +
-        '<tr><th style="padding:0.5rem 0.65rem;">User</th><th style="padding:0.5rem 0.65rem;">Type</th><th style="padding:0.5rem 0.65rem;">Details</th><th style="padding:0.5rem 0.65rem;">Status</th><th style="padding:0.5rem 0.65rem;text-align:right;">Actions</th></tr>' +
+        '<tr><th style="padding:0.5rem 0.65rem;">User</th><th style="padding:0.5rem 0.65rem;">ID</th><th style="padding:0.5rem 0.65rem;">Status</th><th style="padding:0.5rem 0.65rem;text-align:right;">Actions</th></tr>' +
       '</thead>' +
       '<tbody>' +
         pending.map((u, i) => {
-          const isStudent = u.user_type === 'student';
-          const typeLabel = u.user_type_display || u.user_type;
-          const typeBadge = isStudent ? '#16a34a' : '#3b82f6';
-          const iconName = isStudent ? 'graduation-cap' : 'presentation';
-          const iconBg = isStudent ? '#16a34a' : '#3b82f6';
           return '<tr>' +
             '<td style="padding:0.55rem 0.65rem;">' +
               '<div style="display:flex;align-items:center;gap:0.55rem;">' +
-                '<div style="width:32px;height:32px;border-radius:8px;background:' + iconBg + ';display:flex;align-items:center;justify-content:center;"><i data-lucide="' + iconName + '" style="width:16px;height:16px;color:#fff;"></i></div>' +
+                '<div style="width:32px;height:32px;border-radius:8px;background:#16a34a;display:flex;align-items:center;justify-content:center;"><i data-lucide="graduation-cap" style="width:16px;height:16px;color:#fff;"></i></div>' +
                 '<div>' +
                   '<strong style="font-size:0.82rem;">' + escapeHtml(u.full_name) + '</strong>' +
                   '<span class="text-muted small d-block" style="font-size:0.7rem;line-height:1.3;">' + escapeHtml(u.email) + '</span>' +
                 '</div>' +
               '</div>' +
             '</td>' +
-            '<td style="padding:0.55rem 0.65rem;"><span class="badge-status" style="background:' + typeBadge + ';color:#fff;">' + typeLabel + '</span></td>' +
-            '<td style="padding:0.55rem 0.65rem;font-size:0.75rem;color:#4b5563;">ID: <strong>' + escapeHtml(u.student_faculty_id) + '</strong></td>' +
+            '<td style="padding:0.55rem 0.65rem;font-size:0.75rem;color:#4b5563;"><strong>' + escapeHtml(u.student_faculty_id) + '</strong></td>' +
+            '<td style="padding:0.55rem 0.65rem;"><span class="badge-status" style="background:#f59e0b;color:#fff;">Pending</span></td>' +
+             '<td style="padding:0.55rem 0.65rem;text-align:right;white-space:nowrap;">' +
+              '<button class="icon-btn" style="width:30px;height:30px;color:#ef4444;display:inline-flex;" onclick="rejectUser(\'' + u.user_id + '\')" title="Reject"><i data-lucide="x-circle" style="width:16px;height:16px;"></i></button>' +
+              '<button class="icon-btn" style="width:30px;height:30px;color:#16a34a;display:inline-flex;margin-left:6px;" onclick="approveUser(\'' + u.user_id + '\')" title="Approve"><i data-lucide="check-circle" style="width:16px;height:16px;"></i></button>' +
+            '</td>' +
+          '</tr>';
+        }).join('') +
+      '</tbody>' +
+    '</table>';
+}
+
+function renderPendingFaculty() {
+  const container = document.getElementById('pendingFacultyList');
+  const pending = adminUsers.filter(u => !u.is_active && u.user_type === 'faculty');
+  document.getElementById('pendingFacultyCount').textContent = pending.length || 0;
+  if (!pending.length) {
+    container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="inbox" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">No pending faculty approvals.</p></div>';
+    return;
+  }
+  container.innerHTML =
+    '<table class="admin-table" style="font-size:0.8rem;">' +
+      '<thead>' +
+        '<tr><th style="padding:0.5rem 0.65rem;">User</th><th style="padding:0.5rem 0.65rem;">ID</th><th style="padding:0.5rem 0.65rem;">ID Photo</th><th style="padding:0.5rem 0.65rem;">Status</th><th style="padding:0.5rem 0.65rem;text-align:right;">Actions</th></tr>' +
+      '</thead>' +
+      '<tbody>' +
+        pending.map((u, i) => {
+          const photoIcon = u.faculty_id_image
+            ? '<button class="icon-btn" style="width:28px;height:28px;color:#3b82f6;font-size:0.75rem;" onclick="openFacultyIdModal(\'' + u.faculty_id_image + '\')" title="View Faculty ID"><i data-lucide="id-card" style="width:14px;height:14px;"></i></button>'
+            : '<span style="color:#ef4444;font-size:0.7rem;" title="No ID photo">—</span>';
+          return '<tr>' +
+            '<td style="padding:0.55rem 0.65rem;">' +
+              '<div style="display:flex;align-items:center;gap:0.55rem;">' +
+                '<div style="width:32px;height:32px;border-radius:8px;background:#3b82f6;display:flex;align-items:center;justify-content:center;"><i data-lucide="presentation" style="width:16px;height:16px;color:#fff;"></i></div>' +
+                '<div>' +
+                  '<strong style="font-size:0.82rem;">' + escapeHtml(u.full_name) + '</strong>' +
+                  '<span class="text-muted small d-block" style="font-size:0.7rem;line-height:1.3;">' + escapeHtml(u.email) + '</span>' +
+                '</div>' +
+              '</div>' +
+            '</td>' +
+            '<td style="padding:0.55rem 0.65rem;font-size:0.75rem;color:#4b5563;"><strong>' + escapeHtml(u.student_faculty_id) + '</strong></td>' +
+            '<td style="padding:0.55rem 0.65rem;text-align:center;">' + photoIcon + '</td>' +
             '<td style="padding:0.55rem 0.65rem;"><span class="badge-status" style="background:#f59e0b;color:#fff;">Pending</span></td>' +
              '<td style="padding:0.55rem 0.65rem;text-align:right;white-space:nowrap;">' +
               '<button class="icon-btn" style="width:30px;height:30px;color:#ef4444;display:inline-flex;" onclick="rejectUser(\'' + u.user_id + '\')" title="Reject"><i data-lucide="x-circle" style="width:16px;height:16px;"></i></button>' +
@@ -470,6 +529,11 @@ function openDtiModal(url) {
   new bootstrap.Modal(document.getElementById('dtiModal')).show();
 }
 
+function openFacultyIdModal(url) {
+  document.getElementById('facultyIdModalImage').src = url;
+  new bootstrap.Modal(document.getElementById('facultyIdModal')).show();
+}
+
 async function loadStats() {
   const data = await apiGet('/api/kaon-admin/stats/');
   if (data) adminStats = data;
@@ -481,7 +545,8 @@ async function loadUsers() {
   if (data) adminUsers = data;
   renderUsers();
   renderPending();
-  renderPendingUsers();
+  renderPendingStudents();
+  renderPendingFaculty();
   lucide.createIcons();
 }
 

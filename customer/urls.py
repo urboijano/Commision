@@ -19,6 +19,7 @@ urlpatterns = [
     path('api/cart/clear/', views.clear_cart, name='cart-clear'),
     path('api/orders/', views.my_orders, name='my-orders'),
     path('api/orders/place/', views.place_order, name='place-order'),
+    path('api/orders/repeat/', views.repeat_last_order, name='repeat-order'),
     path('api/orders/<uuid:order_id>/', views.order_detail, name='order-detail'),
     path('api/orders/<uuid:order_id>/track/', views.track_order, name='track-order'),
     path('api/feedback/', views.submit_feedback, name='submit-feedback'),

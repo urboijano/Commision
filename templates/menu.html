@@ -168,6 +168,14 @@ let currentCategory = '';
 let cartData = { items: [], total_items: 0, total_price: 0 };
 let searchTerm = '';
 
+const urlParams = new URLSearchParams(window.location.search);
+const qParam = urlParams.get('q');
+if (qParam) {
+  searchTerm = qParam.toLowerCase();
+  const input = document.getElementById('searchInput');
+  if (input) input.value = qParam;
+}
+
 const catPills = document.querySelectorAll('.category-pill');
 catPills.forEach(pill => {
   pill.addEventListener('click', function(e) {

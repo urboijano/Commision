@@ -59,13 +59,27 @@
             </div>
             <div class="auth-hint">Format: Surname, First Name M.I. (e.g. Dela Cruz, Juan P.)</div>
           </div>
-          <div class="auth-field">
-            <div class="auth-input-group">
-              <span class="auth-input-icon"><i data-lucide="badge-check" style="width: 18px; height: 18px;"></i></span>
-              <input type="text" class="auth-input" id="studentId" required maxlength="30" pattern="[-\d]+" title="Digits and hyphens only" placeholder=" " autocomplete="off" oninput="this.value = this.value.replace(/[^0-9-]/g, '')">
-              <label class="auth-label" for="studentId">Student / Faculty ID</label>
+
+          <div id="rightColumnFields">
+            <div class="auth-field" id="studentIdField">
+              <div class="auth-input-group">
+                <span class="auth-input-icon"><i data-lucide="badge-check" style="width: 18px; height: 18px;"></i></span>
+                <input type="text" class="auth-input" id="studentId" required maxlength="30" pattern="[-\d]+" title="Digits and hyphens only" placeholder=" " autocomplete="off" oninput="this.value = this.value.replace(/[^0-9-]/g, '')">
+                <label class="auth-label" for="studentId">Student ID</label>
+              </div>
+                <div class="auth-hint">Enter your school-issued student ID</div>
             </div>
-              <div class="auth-hint">Enter your school-issued student or faculty ID</div>
+            <div class="auth-field" id="facultyUploadField" style="display:none;">
+              <div class="auth-input-group">
+                <span class="auth-input-icon"><i data-lucide="camera" style="width: 18px; height: 18px;"></i></span>
+                <label class="auth-input" for="facultyIdImage" style="display:flex;align-items:center;cursor:pointer;padding:0.75rem 1rem 0.75rem 2.75rem;">
+                  <input type="file" id="facultyIdImage" accept="image/*" style="display:none;" onchange="var f=this.files[0];document.getElementById('facultyIdFileName').textContent=f?f.name+(f.size>5*1024*1024?' (too large!)':' ('+Math.round(f.size/1024)+'KB)'):'Choose file...';">
+                  <span id="facultyIdFileName" style="color:#9ca3af;font-size:0.85rem;">Choose file...</span>
+                </label>
+                <label class="auth-label" for="facultyIdImage" style="cursor:pointer;transform:translateY(-22px) scale(0.85);color:#1a1a1a;">Faculty ID Photo</label>
+              </div>
+              <div class="auth-hint">Upload a clear photo of your faculty ID showing the QR code (max 5MB).</div>
+            </div>
           </div>
         </div>
 
@@ -212,6 +226,36 @@ function showTosModal() {
     new bootstrap.Modal(document.getElementById('tosModal')).show();
 }
 
+function compressImageFile(file, maxWidth, quality) {
+    return new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var img = new Image();
+            img.onload = function() {
+                var canvas = document.createElement('canvas');
+                var w = img.width, h = img.height;
+                if (w > maxWidth) {
+                    h = Math.round(h * maxWidth / w);
+                    w = maxWidth;
+                }
+                canvas.width = w;
+                canvas.height = h;
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                canvas.toBlob(function(blob) {
+                    var name = file.name.replace(/\.(png|jpe?g)$/i, '.jpg');
+                    var compressed = new File([blob], name, { type: 'image/jpeg' });
+                    resolve(compressed);
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = function() { resolve(file); };
+            img.src = e.target.result;
+        };
+        reader.onerror = function() { resolve(file); };
+        reader.readAsDataURL(file);
+    });
+}
+
 function checkPasswordCriteria(pw) {
     return {
         length: pw.length >= 8,
@@ -259,6 +303,17 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.auth-toggle-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
+            const val = this.dataset.value;
+            const uploadField = document.getElementById('facultyUploadField');
+            const idField = document.getElementById('studentIdField');
+            const idInput = document.getElementById('studentId');
+            if (idField) {
+                idField.style.display = val === 'faculty' ? 'none' : '';
+                idInput.required = val !== 'faculty';
+            }
+            if (uploadField) {
+                uploadField.style.display = val === 'faculty' ? '' : 'none';
+            }
         });
     });
 
@@ -295,22 +350,59 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const userType = document.querySelector('input[name="userType"]:checked').value;
+        const facultyFile = document.getElementById('facultyIdImage').files[0];
+        const studentId = userType === 'student' ? document.getElementById('studentId').value : '';
 
-        const result = await apiPost('/api/auth/register/', {
-            full_name: document.getElementById('fullName').value,
-            student_faculty_id: document.getElementById('studentId').value,
-            user_type: userType,
-            email: document.getElementById('email').value,
-            password: password,
-        });
-
-        if (result && result.message) {
-            showAlert(result.message, 'success');
-            setTimeout(function() { window.location.href = '/login/'; }, 2000);
-        } else {
-            btn.disabled = false;
-            spinner.classList.add('d-none');
+        if (userType === 'faculty') {
+            if (!facultyFile) {
+                showAlert('Please upload a clear photo of your faculty ID showing the QR code.', 'danger');
+                btn.disabled = false;
+                spinner.classList.add('d-none');
+                return;
+            }
+            if (facultyFile.size > 5 * 1024 * 1024) {
+                showAlert('Faculty ID photo must be under 5MB.', 'danger');
+                btn.disabled = false;
+                spinner.classList.add('d-none');
+                return;
+            }
         }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Submitting...';
+
+        try {
+            let result;
+            if (facultyFile) {
+                const compressedFile = await compressImageFile(facultyFile, 1200, 0.75);
+                const formData = new FormData();
+                formData.append('full_name', document.getElementById('fullName').value);
+                formData.append('student_faculty_id', studentId);
+                formData.append('user_type', userType);
+                formData.append('email', document.getElementById('email').value);
+                formData.append('password', password);
+                formData.append('faculty_id_image', compressedFile);
+                result = await apiPostFormData('/api/auth/register/', formData);
+            } else {
+                result = await apiPost('/api/auth/register/', {
+                    full_name: document.getElementById('fullName').value,
+                    student_faculty_id: studentId,
+                    user_type: userType,
+                    email: document.getElementById('email').value,
+                    password: password,
+                });
+            }
+
+            if (result && result.message) {
+                showAlert(result.message, 'success');
+                setTimeout(function() { window.location.href = '/login/'; }, 2000);
+                return;
+            }
+        } catch (e) {
+            if (e && e.message) showAlert(e.message, 'danger');
+        }
+        btn.disabled = false;
+        btn.innerHTML = 'Create Account';
     });
 });
 </script>

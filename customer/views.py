@@ -72,6 +72,7 @@ def register(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     data = serializer.validated_data
+    faculty_id_image = request.FILES.get('faculty_id_image')
 
     try:
         with transaction.atomic():
@@ -81,9 +82,12 @@ def register(request):
                 password=data['password'],
                 full_name=data['full_name'],
                 user_type=data['user_type'],
-                student_faculty_id=data['student_faculty_id'],
+                student_faculty_id=data.get('student_faculty_id') or None,
                 is_active=False,
             )
+            if data['user_type'] == 'faculty' and faculty_id_image:
+                user.faculty_id_image = compress_image(faculty_id_image)
+                user.save()
             Cart.objects.create(user=user)
     except IntegrityError:
         return Response(
@@ -500,6 +504,49 @@ def my_orders(request):
     orders = Order.objects.filter(user=request.user).prefetch_related('items', 'status_history')
     serializer = OrderSerializer(orders, many=True)
     return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def repeat_last_order(request):
+    last_order = Order.objects.filter(user=request.user).order_by('-created_at').prefetch_related('items__item').first()
+    if not last_order:
+        return Response(
+            {'error': 'No previous orders found.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    order_items = list(last_order.items.all())
+    if not order_items:
+        return Response(
+            {'error': 'Your last order has no items.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    cart, _ = Cart.objects.get_or_create(user=request.user)
+    cart.items.all().delete()
+
+    skipped = []
+    added = 0
+    for oi in order_items:
+        if oi.item and oi.item.is_available:
+            CartItem.objects.create(cart=cart, item=oi.item, quantity=oi.quantity)
+            added += 1
+        else:
+            skipped.append(oi.item_name)
+
+    if added == 0:
+        cart.items.all().delete()
+        return Response(
+            {'error': 'None of the items from your last order are available right now.'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    cart = Cart.objects.prefetch_related('items__item').get(pk=cart.pk)
+    data = CartSerializer(cart).data
+    if skipped:
+        data['warning'] = f'Some items were unavailable and were skipped: {", ".join(skipped)}.'
+    return Response(data)
 
 
 @api_view(['GET'])
@@ -1200,6 +1247,8 @@ def admin_stats(request):
     total_revenue = Order.objects.filter(payment_status='paid').aggregate(total=Sum('total_amount'))['total'] or 0
     total_feedback = Feedback.objects.count()
     pending_approval = User.objects.filter(is_active=False).count()
+    pending_faculty = User.objects.filter(is_active=False, user_type='faculty').count()
+    pending_students = User.objects.filter(is_active=False, user_type='student').count()
     top_selling = (
         OrderItem.objects.values('item_name')
         .annotate(total_qty=Sum('quantity'))
@@ -1214,6 +1263,8 @@ def admin_stats(request):
         'total_revenue': total_revenue,
         'total_feedback': total_feedback,
         'pending_approval': pending_approval,
+        'pending_faculty': pending_faculty,
+        'pending_students': pending_students,
         'top_selling': list(top_selling),
     })
 

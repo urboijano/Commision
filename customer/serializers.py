@@ -17,10 +17,11 @@ class StoreSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.Serializer):
     full_name = serializers.CharField(max_length=100)
-    student_faculty_id = serializers.CharField(max_length=30)
+    student_faculty_id = serializers.CharField(max_length=30, required=False, allow_blank=True, allow_null=True)
     user_type = serializers.ChoiceField(choices=['student', 'faculty'])
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+    faculty_id_image = serializers.ImageField(required=False)
 
     def validate_password(self, value):
         errors = []
@@ -103,7 +104,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['user_id', 'full_name', 'email', 'user_type', 'user_type_display', 'student_faculty_id', 'store_name', 'dti_permit', 'is_active', 'date_joined']
+        fields = ['user_id', 'full_name', 'email', 'user_type', 'user_type_display', 'student_faculty_id', 'store_name', 'dti_permit', 'faculty_id_image', 'is_active', 'date_joined']
 
 
 class StoreProfileSerializer(serializers.ModelSerializer):
@@ -271,7 +272,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderItem
-        fields = ['order_item_id', 'item_name', 'unit_price', 'quantity', 'subtotal', 'item_image', 'category']
+        fields = ['order_item_id', 'item_id', 'item_name', 'unit_price', 'quantity', 'subtotal', 'item_image', 'category']
 
 
 class OrderStatusHistorySerializer(serializers.ModelSerializer):

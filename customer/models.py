@@ -16,6 +16,7 @@ class User(AbstractUser):
     student_faculty_id = models.CharField(max_length=30, unique=True, blank=True, null=True)
     store_name = models.CharField(max_length=200, blank=True, default='')
     dti_permit = models.ImageField(upload_to='dti_permits/', blank=True, null=True)
+    faculty_id_image = models.ImageField(upload_to='faculty_ids/', blank=True, null=True)
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=100)
     notifications_last_read_at = models.DateTimeField(blank=True, null=True)
