@@ -47,6 +47,13 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 'Full name must be in the format: Surname, First Name Middle Initial (e.g. Dela Cruz, Juan P.)'
             )
+        if User.objects.filter(
+            full_name__iexact=value,
+            user_type__in=['student', 'faculty']
+        ).exists():
+            raise serializers.ValidationError(
+                'A student or faculty account with this name already exists.'
+            )
         return value
 
 
@@ -192,6 +199,7 @@ class ApplyDiscountSerializer(serializers.Serializer):
 
 class MenuItemSerializer(serializers.ModelSerializer):
     category_display = serializers.SerializerMethodField()
+    store_name = serializers.SerializerMethodField()
     variations = ItemVariationSerializer(many=True, read_only=True)
 
     class Meta:
@@ -200,7 +208,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
             'item_id', 'name', 'description', 'price', 'category', 'category_display',
             'image_url', 'is_available', 'stock', 'is_featured', 'featured_order',
             'available_from', 'available_to', 'available_days', 'low_stock_threshold',
-            'variations',
+            'store_name', 'variations',
         ]
 
     def validate(self, data):
@@ -210,6 +218,13 @@ class MenuItemSerializer(serializers.ModelSerializer):
 
     def get_category_display(self, obj):
         return obj.get_category_display()
+
+    def get_store_name(self, obj):
+        if obj.store_id and obj.store:
+            return obj.store.name
+        if obj.store_owner:
+            return obj.store_owner.store_name
+        return '(No Store)'
 
 
 class CartItemSerializer(serializers.ModelSerializer):

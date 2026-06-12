@@ -63,6 +63,7 @@ urlpatterns = [
     path('api/kaon-admin/users/<uuid:user_id>/approve/', views.admin_approve_user, name='admin-approve-user'),
     path('api/kaon-admin/users/<uuid:user_id>/reject/', views.admin_reject_user, name='admin-reject-user'),
     path('api/kaon-admin/users/<uuid:user_id>/delete/', views.admin_delete_user, name='admin-user-delete'),
+    path('api/kaon-admin/users/<uuid:user_id>/edit/', views.admin_edit_user, name='admin-user-edit'),
     path('api/kaon-admin/orders/', views.admin_all_orders, name='admin-orders'),
     path('api/kaon-admin/feedback/', views.admin_feedback, name='admin-feedback'),
     path('api/kaon-admin/menu/', views.admin_all_menu_items, name='admin-menu'),

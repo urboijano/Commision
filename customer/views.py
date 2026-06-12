@@ -1246,7 +1246,7 @@ def admin_stats(request):
     total_orders = Order.objects.count()
     total_revenue = Order.objects.filter(payment_status='paid').aggregate(total=Sum('total_amount'))['total'] or 0
     total_feedback = Feedback.objects.count()
-    pending_approval = User.objects.filter(is_active=False).count()
+    pending_approval = User.objects.filter(is_active=False, user_type='store_owner').count()
     pending_faculty = User.objects.filter(is_active=False, user_type='faculty').count()
     pending_students = User.objects.filter(is_active=False, user_type='student').count()
     top_selling = (
@@ -1395,6 +1395,22 @@ def admin_delete_user(request, user_id):
     return Response({'message': 'User deleted.'})
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def admin_edit_user(request, user_id):
+    if request.user.user_type != 'admin':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    user = get_object_or_404(User, user_id=user_id)
+    user_type = request.data.get('user_type')
+    is_active = request.data.get('is_active')
+    if user_type and user_type in dict(User.USER_TYPE_CHOICES):
+        user.user_type = user_type
+    if is_active is not None:
+        user.is_active = bool(is_active)
+    user.save()
+    return Response({'message': 'User updated.', 'user': UserSerializer(user).data})
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def admin_all_orders(request):
@@ -1420,7 +1436,7 @@ def admin_feedback(request):
 def admin_all_menu_items(request):
     if request.user.user_type != 'admin':
         return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
-    items = MenuItem.objects.all().order_by('name')
+    items = MenuItem.objects.select_related('store', 'store_owner').all().order_by('store__name', 'name')
     serializer = MenuItemSerializer(items, many=True)
     return Response(serializer.data)
 
@@ -1435,7 +1451,7 @@ def admin_stores(request):
     for s in stores:
         profile = getattr(s, 'store_profile', None)
         status_obj = getattr(s, 'store_status', None)
-        menu_count = MenuItem.objects.filter(store_owner=s).count()
+        menu_count = MenuItem.objects.filter(store_owner=s, is_available=True).count()
         data.append({
             'user_id': str(s.user_id),
             'full_name': s.full_name,

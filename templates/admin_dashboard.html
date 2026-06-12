@@ -85,8 +85,8 @@
     <button class="admin-nav-item" data-tab="users">
       <i data-lucide="users"></i> Users
     </button>
-    <button class="admin-nav-item" data-tab="menu">
-      <i data-lucide="utensils"></i> Menu
+    <button class="admin-nav-item" data-tab="stores">
+      <i data-lucide="store"></i> Store Menus
     </button>
     <button class="admin-nav-item" data-tab="feedback">
       <i data-lucide="message-square"></i> Feedback
@@ -193,7 +193,7 @@
         <div class="card-body" style="padding:0;overflow-x:auto;">
           <table class="admin-table">
             <thead>
-              <tr><th>Name</th><th>Email</th><th>Type</th><th>ID</th><th>Joined</th><th></th></tr>
+              <tr><th>Name</th><th>Email</th><th>Type</th><th>Status</th><th></th></tr>
             </thead>
             <tbody id="usersList"></tbody>
           </table>
@@ -201,18 +201,18 @@
       </div>
     </div>
 
-    <div id="tabMenu" class="dash-tab-content">
+    <div id="tabStores" class="dash-tab-content">
       <div class="card">
         <div class="card-header">
-          <h5>Menu Items</h5>
-          <span id="adminMenuCount" class="badge" style="background:#ccff00;color:#1a1a1a;">0</span>
+          <h5>All Stores</h5>
+          <span id="adminStoreCount" class="badge" style="background:#ccff00;color:#1a1a1a;">0</span>
         </div>
         <div class="card-body" style="padding:0;overflow-x:auto;">
           <table class="admin-table">
             <thead>
-              <tr><th>Item</th><th>Price</th><th>Category</th><th>Status</th></tr>
+              <tr><th>Store</th><th>Owner</th><th>Items</th><th>Status</th><th>Joined</th></tr>
             </thead>
-            <tbody id="adminMenuList"></tbody>
+            <tbody id="adminStoreList"></tbody>
           </table>
         </div>
       </div>
@@ -249,6 +249,27 @@
   </div>
 </div>
 
+<div class="modal fade" id="confirmActionModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="border-radius:16px;border:none;">
+      <div class="modal-body text-center" style="padding:2rem;">
+        <i id="confirmActionIcon" data-lucide="check-circle" style="width:40px;height:40px;color:#16a34a;margin-bottom:1rem;"></i>
+        <h6 id="confirmActionTitle" style="font-weight:700;">Approve this user?</h6>
+        <p id="confirmActionDesc" class="text-muted small">This will activate their account.</p>
+        <input type="hidden" id="confirmActionUserId">
+        <input type="hidden" id="confirmActionType">
+        <div style="display:flex;gap:0.5rem;justify-content:center;">
+          <button class="btn btn-sm" style="background:#f3f4f6;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-sm" style="background:#16a34a;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" id="confirmActionBtn" onclick="handleConfirmAction()">
+            <span id="confirmActionSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+            <span id="confirmActionBtnText">Approve</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="dtiModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.12);">
@@ -278,6 +299,48 @@
   </div>
 </div>
 
+<div class="modal fade" id="storeMenuModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.12);">
+      <div class="modal-header" style="border-bottom:1px solid #f0f0f0;padding:1.25rem 1.5rem;">
+        <h5 style="font-weight:800;margin:0;font-size:1.1rem;"><i data-lucide="store" style="width:18px;height:18px;margin-right:0.5rem;vertical-align:text-bottom;"></i><span id="storeMenuModalTitle">Store Menu</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="padding:1.5rem;">
+        <div id="storeMenuModalBody"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="viewUserModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.12);">
+      <div class="modal-header" style="border-bottom:1px solid #f0f0f0;padding:1.25rem 1.5rem;">
+        <h5 style="font-weight:800;margin:0;font-size:1.1rem;"><i data-lucide="user" style="width:18px;height:18px;margin-right:0.5rem;vertical-align:text-bottom;"></i> User Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="padding:1.5rem;" id="viewUserBody"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editUserModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.12);">
+      <div class="modal-header" style="border-bottom:1px solid #f0f0f0;padding:1.25rem 1.5rem;">
+        <h5 style="font-weight:800;margin:0;font-size:1.1rem;"><i data-lucide="pencil" style="width:18px;height:18px;margin-right:0.5rem;vertical-align:text-bottom;"></i> Edit User</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="padding:1.5rem;" id="editUserBody"></div>
+      <div class="modal-footer" style="border-top:1px solid #f0f0f0;padding:1rem 1.5rem;">
+        <button class="btn btn-sm" style="background:#f3f4f6;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-sm" style="background:#1a1a1a;color:#ccff00;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" id="saveEditUser">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 {% block scripts %}
 <script>
@@ -285,6 +348,7 @@ lucide.createIcons();
 
 let adminStats = {};
 let adminUsers = [];
+let adminStores = [];
 let adminMenu = [];
 let adminFeedback = [];
 let userTypeFilter = 'all';
@@ -302,7 +366,7 @@ function renderStats() {
 
 function renderPending() {
   const container = document.getElementById('pendingList');
-  const pending = adminUsers.filter(u => !u.is_active);
+  const pending = adminUsers.filter(u => !u.is_active && u.user_type === 'store_owner');
   if (!pending.length) {
     container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="inbox" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">No pending approvals.</p></div>';
     return;
@@ -310,33 +374,25 @@ function renderPending() {
   container.innerHTML =
     '<table class="admin-table" style="font-size:0.8rem;">' +
       '<thead>' +
-        '<tr><th style="padding:0.5rem 0.65rem;">User</th><th style="padding:0.5rem 0.65rem;">Type</th><th style="padding:0.5rem 0.65rem;">Details</th><th style="padding:0.5rem 0.65rem;">Status</th><th style="padding:0.5rem 0.65rem;text-align:right;">Actions</th></tr>' +
+        '<tr><th style="padding:0.5rem 0.65rem;">Store Owner</th><th style="padding:0.5rem 0.65rem;">Store</th><th style="padding:0.5rem 0.65rem;">DTI Permit</th><th style="padding:0.5rem 0.65rem;">Status</th><th style="padding:0.5rem 0.65rem;text-align:right;">Actions</th></tr>' +
       '</thead>' +
       '<tbody>' +
         pending.map((u, i) => {
-          const isStore = u.user_type === 'store_owner';
-          const typeLabel = u.user_type_display || u.user_type;
-          const typeBadge = isStore ? '#f97316' : (u.user_type === 'faculty' ? '#3b82f6' : '#16a34a');
           const docIcon = u.dti_permit
             ? '<button class="icon-btn" style="width:28px;height:28px;color:#3b82f6;font-size:0.75rem;" onclick="openDtiModal(\'' + u.dti_permit + '\')" title="View DTI Permit"><i data-lucide="file-image" style="width:14px;height:14px;"></i></button>'
             : '<span style="color:#ef4444;font-size:0.7rem;" title="No DTI Permit">—</span>';
-          const detailText = isStore
-            ? 'Store: <strong>' + escapeHtml(u.store_name) + '</strong>'
-            : 'ID: <strong>' + escapeHtml(u.student_faculty_id) + '</strong>';
-          const iconName = isStore ? 'store' : 'user';
-          const iconBg = isStore ? '#f97316' : '#3b82f6';
           return '<tr>' +
             '<td style="padding:0.55rem 0.65rem;">' +
               '<div style="display:flex;align-items:center;gap:0.55rem;">' +
-                '<div style="width:32px;height:32px;border-radius:8px;background:' + iconBg + ';display:flex;align-items:center;justify-content:center;"><i data-lucide="' + iconName + '" style="width:16px;height:16px;color:#fff;"></i></div>' +
+                '<div style="width:32px;height:32px;border-radius:8px;background:#f97316;display:flex;align-items:center;justify-content:center;"><i data-lucide="store" style="width:16px;height:16px;color:#fff;"></i></div>' +
                 '<div>' +
                   '<strong style="font-size:0.82rem;">' + escapeHtml(u.full_name) + '</strong>' +
                   '<span class="text-muted small d-block" style="font-size:0.7rem;line-height:1.3;">' + escapeHtml(u.email) + '</span>' +
                 '</div>' +
               '</div>' +
             '</td>' +
-            '<td style="padding:0.55rem 0.65rem;"><span class="badge-status" style="background:' + typeBadge + ';color:#fff;">' + typeLabel + '</span></td>' +
-            '<td style="padding:0.55rem 0.65rem;font-size:0.75rem;color:#4b5563;">' + detailText + (isStore ? ' ' + docIcon : '') + '</td>' +
+            '<td style="padding:0.55rem 0.65rem;font-size:0.75rem;color:#4b5563;"><strong>' + escapeHtml(u.store_name) + '</strong></td>' +
+            '<td style="padding:0.55rem 0.65rem;text-align:center;">' + docIcon + '</td>' +
             '<td style="padding:0.55rem 0.65rem;"><span class="badge-status" style="background:#f59e0b;color:#fff;">Pending</span></td>' +
              '<td style="padding:0.55rem 0.65rem;text-align:right;white-space:nowrap;">' +
               '<button class="icon-btn" style="width:30px;height:30px;color:#ef4444;display:inline-flex;" onclick="rejectUser(\'' + u.user_id + '\')" title="Reject"><i data-lucide="x-circle" style="width:16px;height:16px;"></i></button>' +
@@ -398,7 +454,7 @@ function renderPendingFaculty() {
   container.innerHTML =
     '<table class="admin-table" style="font-size:0.8rem;">' +
       '<thead>' +
-        '<tr><th style="padding:0.5rem 0.65rem;">User</th><th style="padding:0.5rem 0.65rem;">ID</th><th style="padding:0.5rem 0.65rem;">ID Photo</th><th style="padding:0.5rem 0.65rem;">Status</th><th style="padding:0.5rem 0.65rem;text-align:right;">Actions</th></tr>' +
+        '<tr><th style="padding:0.5rem 0.65rem;">User</th><th style="padding:0.5rem 0.65rem;">ID Photo</th><th style="padding:0.5rem 0.65rem;">Status</th><th style="padding:0.5rem 0.65rem;text-align:right;">Actions</th></tr>' +
       '</thead>' +
       '<tbody>' +
         pending.map((u, i) => {
@@ -415,7 +471,6 @@ function renderPendingFaculty() {
                 '</div>' +
               '</div>' +
             '</td>' +
-            '<td style="padding:0.55rem 0.65rem;font-size:0.75rem;color:#4b5563;"><strong>' + escapeHtml(u.student_faculty_id) + '</strong></td>' +
             '<td style="padding:0.55rem 0.65rem;text-align:center;">' + photoIcon + '</td>' +
             '<td style="padding:0.55rem 0.65rem;"><span class="badge-status" style="background:#f59e0b;color:#fff;">Pending</span></td>' +
              '<td style="padding:0.55rem 0.65rem;text-align:right;white-space:nowrap;">' +
@@ -441,7 +496,7 @@ function renderUsers() {
            (u.student_faculty_id && u.student_faculty_id.toLowerCase().includes(q));
   });
   if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="padding:3rem 0;text-align:center;"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="search-x" style="width:36px;height:36px;"></i></div><p style="color:#9ca3af;font-size:0.85rem;margin:0;">No users match your search.</p></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:3rem 0;text-align:center;"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="search-x" style="width:36px;height:36px;"></i></div><p style="color:#9ca3af;font-size:0.85rem;margin:0;">No users match your search.</p></td></tr>';
     document.getElementById('userCount').textContent = '0';
     return;
   }
@@ -454,34 +509,73 @@ function renderUsers() {
       '<td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="user-avatar-sm" style="background:' + colors[i % colors.length] + ';color:#1a1a1a;">' + initial + '</div><div><strong style="font-size:0.85rem;">' + escapeHtml(u.full_name) + '</strong>' + (u.store_name ? '<span class="text-muted small d-block">' + escapeHtml(u.store_name) + '</span>' : '') + '</div></div></td>' +
       '<td class="text-muted">' + escapeHtml(u.email) + '</td>' +
       '<td><span class="badge-status" style="background:' + typeColor + ';color:#fff;">' + typeLabel + '</span></td>' +
-      '<td class="text-muted">' + (u.student_faculty_id || '-') + '</td>' +
-      '<td class="text-muted" style="font-size:0.75rem;">' + (u.date_joined ? new Date(u.date_joined).toLocaleDateString() : '-') + '</td>' +
-      '<td>' + (u.user_type !== 'admin' ? '<button class="icon-btn" style="width:30px;height:30px;color:#ef4444;font-size:0.85rem;" onclick="confirmDeleteUser(\'' + u.user_id + '\')"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>' : '') + '</td>' +
+      '<td><span class="badge-status" style="background:' + (u.is_active ? '#16a34a' : '#ef4444') + ';color:#fff;">' + (u.is_active ? 'Active' : 'Inactive') + '</span></td>' +
+      '<td style="white-space:nowrap;">' +
+        (u.user_type !== 'admin' ? '<button class="icon-btn" style="width:30px;height:30px;color:#3b82f6;font-size:0.85rem;display:inline-flex;" onclick="viewUser(\'' + u.user_id + '\')" title="View"><i data-lucide="eye" style="width:15px;height:15px;"></i></button>' : '') +
+        (u.user_type !== 'admin' ? '<button class="icon-btn" style="width:30px;height:30px;color:#f59e0b;font-size:0.85rem;display:inline-flex;margin-left:4px;" onclick="editUser(\'' + u.user_id + '\')" title="Edit"><i data-lucide="pencil" style="width:15px;height:15px;"></i></button>' : '') +
+        (u.user_type !== 'admin' ? '<button class="icon-btn" style="width:30px;height:30px;color:#ef4444;font-size:0.85rem;display:inline-flex;margin-left:4px;" onclick="confirmDeleteUser(\'' + u.user_id + '\')" title="Delete"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>' : '') +
+      '</td>' +
       '</tr>';
   }).join('');
   document.getElementById('userCount').textContent = filtered.length;
   lucide.createIcons();
 }
 
-function renderMenu() {
-  const tbody = document.getElementById('adminMenuList');
-  if (!adminMenu.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-muted small text-center py-4">No menu items yet.</td></tr>';
-    document.getElementById('adminMenuCount').textContent = '0';
+function renderStores() {
+  const tbody = document.getElementById('adminStoreList');
+  if (!adminStores.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-muted small text-center py-4">No stores registered yet.</td></tr>';
+    document.getElementById('adminStoreCount').textContent = '0';
     return;
   }
-  tbody.innerHTML = adminMenu.map(item =>
-    '<tr>' +
+  tbody.innerHTML = adminStores.map(s => {
+    const statusColor = s.is_deactivated ? '#6b7280' : s.is_open ? '#16a34a' : '#f59e0b';
+    const statusLabel = s.is_deactivated ? 'Deactivated' : s.is_open ? 'Open' : 'Closed';
+    const activeColor = s.is_active ? '#16a34a' : '#ef4444';
+    const activeLabel = s.is_active ? 'Approved' : 'Pending';
+    return '<tr style="cursor:pointer;" onclick="openStoreMenu(\'' + escapeHtml(s.store_name) + '\')">' +
       '<td><div style="display:flex;align-items:center;gap:0.5rem;">' +
-        (item.image_url ? '<img src="' + item.image_url + '" alt="" style="width:32px;height:32px;border-radius:8px;object-fit:cover;flex-shrink:0;">' : '<div style="width:32px;height:32px;border-radius:8px;background:#f3f4f6;flex-shrink:0;"></div>') +
-        '<strong style="font-size:0.85rem;">' + escapeHtml(item.name) + '</strong>' +
+        '<div style="width:32px;height:32px;border-radius:8px;background:#f97316;display:flex;align-items:center;justify-content:center;"><i data-lucide="store" style="width:16px;height:16px;color:#fff;"></i></div>' +
+        '<div><strong style="font-size:0.85rem;">' + escapeHtml(s.store_name) + '</strong></div>' +
       '</div></td>' +
-      '<td class="text-muted">₱' + parseFloat(item.price).toFixed(2) + '</td>' +
-      '<td><span class="badge-status" style="background:#f3f4f6;color:#6b7280;">' + (item.category_display || item.category) + '</span></td>' +
-      '<td>' + (item.is_available ? '<span class="badge-status" style="background:#16a34a;color:#fff;">Available</span>' : '<span class="badge-status" style="background:#6b7280;color:#fff;">Unavailable</span>') + '</td>' +
-    '</tr>'
-  ).join('');
-  document.getElementById('adminMenuCount').textContent = adminMenu.length;
+      '<td><div><strong style="font-size:0.82rem;">' + escapeHtml(s.full_name) + '</strong><span class="text-muted small d-block" style="font-size:0.7rem;">' + escapeHtml(s.email) + '</span></div></td>' +
+      '<td class="text-muted">' + (s.menu_count || 0) + '</td>' +
+      '<td><span class="badge-status" style="background:' + statusColor + ';color:#fff;">' + statusLabel + '</span> <span class="badge-status" style="background:' + activeColor + ';color:#fff;">' + activeLabel + '</span></td>' +
+      '<td class="text-muted" style="font-size:0.75rem;">' + (s.date_joined ? new Date(s.date_joined).toLocaleDateString() : '-') + '</td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('adminStoreCount').textContent = adminStores.length;
+  lucide.createIcons();
+}
+
+function openStoreMenu(storeName) {
+  const available = adminMenu.filter(item => item.store_name === storeName && item.is_available);
+  document.getElementById('storeMenuModalTitle').textContent = storeName + ' - Available Items';
+  const body = document.getElementById('storeMenuModalBody');
+  if (!available.length) {
+    body.innerHTML = '<div class="text-center py-4"><i data-lucide="package-open" style="width:36px;height:36px;color:#d1d5db;margin-bottom:0.5rem;"></i><p class="text-muted small mb-0">No available items for this store.</p></div>';
+  } else {
+    body.innerHTML =
+      '<table class="admin-table">' +
+        '<thead>' +
+          '<tr><th style="padding:0.5rem 0.65rem;">Item</th><th style="padding:0.5rem 0.65rem;">Price</th><th style="padding:0.5rem 0.65rem;">Category</th></tr>' +
+        '</thead>' +
+        '<tbody>' +
+          available.map(item =>
+            '<tr>' +
+              '<td style="padding:0.55rem 0.65rem;"><div style="display:flex;align-items:center;gap:0.5rem;">' +
+                (item.image_url ? '<img src="' + item.image_url + '" alt="" style="width:32px;height:32px;border-radius:8px;object-fit:cover;flex-shrink:0;">' : '<div style="width:32px;height:32px;border-radius:8px;background:#f3f4f6;flex-shrink:0;"></div>') +
+                '<strong style="font-size:0.85rem;">' + escapeHtml(item.name) + '</strong>' +
+              '</div></td>' +
+              '<td style="padding:0.55rem 0.65rem;" class="text-muted">₱' + parseFloat(item.price).toFixed(2) + '</td>' +
+              '<td style="padding:0.55rem 0.65rem;"><span class="badge-status" style="background:#f3f4f6;color:#6b7280;">' + (item.category_display || item.category) + '</span></td>' +
+            '</tr>'
+          ).join('') +
+        '</tbody>' +
+      '</table>';
+  }
+  lucide.createIcons();
+  new bootstrap.Modal(document.getElementById('storeMenuModal')).show();
 }
 
 function renderFeedback() {
@@ -524,6 +618,64 @@ function confirmDeleteUser(userId) {
   new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
 }
 
+function viewUser(userId) {
+  const u = adminUsers.find(x => x.user_id === userId);
+  if (!u) return;
+  const typeColor = u.user_type === 'admin' ? '#7c3aed' : u.user_type === 'store_owner' ? '#f97316' : u.user_type === 'faculty' ? '#3b82f6' : '#16a34a';
+  const typeLabel = u.user_type_display || u.user_type;
+  const statusColor = u.is_active ? '#16a34a' : '#ef4444';
+  const statusLabel = u.is_active ? 'Active' : 'Inactive';
+  document.getElementById('viewUserBody').innerHTML =
+    '<div style="display:flex;flex-direction:column;align-items:center;gap:0.75rem;padding:1rem 0;">' +
+      '<div style="width:56px;height:56px;border-radius:50%;background:' + typeColor + ';display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:700;color:#fff;">' + (u.full_name ? u.full_name.charAt(0).toUpperCase() : '?') + '</div>' +
+      '<div style="text-align:center;"><strong style="font-size:1.1rem;">' + escapeHtml(u.full_name) + '</strong><span class="text-muted small d-block">' + escapeHtml(u.email) + '</span></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">' +
+      '<div style="background:#f9fafb;border-radius:10px;padding:0.75rem 1rem;"><span class="text-muted small d-block">Type</span><strong style="font-size:0.9rem;">' + typeLabel + '</strong></div>' +
+      '<div style="background:#f9fafb;border-radius:10px;padding:0.75rem 1rem;"><span class="text-muted small d-block">Status</span><strong style="font-size:0.9rem;">' + statusLabel + '</strong></div>' +
+      (u.user_type !== 'faculty' && u.user_type !== 'store_owner' ? '<div style="background:#f9fafb;border-radius:10px;padding:0.75rem 1rem;"><span class="text-muted small d-block">Student/Faculty ID</span><strong style="font-size:0.9rem;">' + escapeHtml(u.student_faculty_id || '-') + '</strong></div>' : '') +
+      '<div style="background:#f9fafb;border-radius:10px;padding:0.75rem 1rem;"><span class="text-muted small d-block">Joined</span><strong style="font-size:0.9rem;">' + (u.date_joined ? new Date(u.date_joined).toLocaleDateString() : '-') + '</strong></div>' +
+      (u.store_name ? '<div style="background:#f9fafb;border-radius:10px;padding:0.75rem 1rem;"><span class="text-muted small d-block">Store</span><strong style="font-size:0.9rem;">' + escapeHtml(u.store_name) + '</strong></div>' : '') +
+      (u.user_type === 'faculty' && u.faculty_id_image ? '<div style="background:#f9fafb;border-radius:10px;padding:0.75rem 1rem;grid-column:1/-1;text-align:center;"><span class="text-muted small d-block">Faculty ID Photo</span><img src="' + u.faculty_id_image + '" alt="Faculty ID" style="width:100%;max-height:180px;object-fit:contain;border-radius:8px;margin-top:0.3rem;cursor:pointer;" onclick="openFacultyIdModal(\'' + u.faculty_id_image + '\')"></div>' : '') +
+    '</div>';
+  lucide.createIcons();
+  new bootstrap.Modal(document.getElementById('viewUserModal')).show();
+}
+
+function editUser(userId) {
+  const u = adminUsers.find(x => x.user_id === userId);
+  if (!u) return;
+  document.getElementById('editUserBody').innerHTML =
+    '<input type="hidden" id="editUserId" value="' + userId + '">' +
+    '<div class="auth-field" style="margin-bottom:1rem;">' +
+      '<label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">User Type</label>' +
+      '<select id="editUserType" style="width:100%;padding:0.6rem 0.75rem;border-radius:10px;border:1px solid #e5e7eb;font-size:0.85rem;background:#fff;">' +
+        '<option value="student"' + (u.user_type === 'student' ? ' selected' : '') + '>Student</option>' +
+        '<option value="faculty"' + (u.user_type === 'faculty' ? ' selected' : '') + '>Faculty</option>' +
+        '<option value="store_owner"' + (u.user_type === 'store_owner' ? ' selected' : '') + '>Store Owner</option>' +
+      '</select>' +
+    '</div>' +
+    '<div class="auth-field">' +
+      '<label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:0.3rem;">Account Status</label>' +
+      '<select id="editUserActive" style="width:100%;padding:0.6rem 0.75rem;border-radius:10px;border:1px solid #e5e7eb;font-size:0.85rem;background:#fff;">' +
+        '<option value="true"' + (u.is_active ? ' selected' : '') + '>Active</option>' +
+        '<option value="false"' + (!u.is_active ? ' selected' : '') + '>Inactive</option>' +
+      '</select>' +
+    '</div>';
+  document.getElementById('saveEditUser').onclick = async function () {
+    const newType = document.getElementById('editUserType').value;
+    const newActive = document.getElementById('editUserActive').value === 'true';
+    const result = await apiPost('/api/kaon-admin/users/' + userId + '/edit/', { user_type: newType, is_active: newActive });
+    if (result) {
+      bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+      showAlert('User updated successfully!', 'success');
+      await loadUsers();
+      await loadStats();
+    }
+  };
+  new bootstrap.Modal(document.getElementById('editUserModal')).show();
+}
+
 function openDtiModal(url) {
   document.getElementById('dtiModalImage').src = url;
   new bootstrap.Modal(document.getElementById('dtiModal')).show();
@@ -550,10 +702,15 @@ async function loadUsers() {
   lucide.createIcons();
 }
 
+async function loadStores() {
+  const data = await apiGet('/api/kaon-admin/stores/');
+  if (data) adminStores = data;
+  renderStores();
+}
+
 async function loadMenu() {
   const data = await apiGet('/api/kaon-admin/menu/');
   if (data) adminMenu = data;
-  renderMenu();
 }
 
 async function loadFeedback() {
@@ -565,13 +722,14 @@ async function loadFeedback() {
 const pageTitles = {
   overview: ['Overview', 'System summary and key metrics'],
   users: ['Users', 'Manage all registered users'],
-  menu: ['Menu', 'View all menu items'],
+  stores: ['Stores', 'View all registered stores'],
   feedback: ['Feedback', 'Review customer feedback'],
 };
 
 document.addEventListener('DOMContentLoaded', function () {
   loadStats();
   loadUsers();
+  loadStores();
   loadMenu();
   loadFeedback();
 
@@ -616,23 +774,64 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  window.approveUser = async function(userId) {
-    const result = await apiPost('/api/kaon-admin/users/' + userId + '/approve/', {});
+  window.handleConfirmAction = async function() {
+    const btn = document.getElementById('confirmActionBtn');
+    const spinner = document.getElementById('confirmActionSpinner');
+    const btnText = document.getElementById('confirmActionBtnText');
+    const originalText = btnText.textContent;
+    const originalBg = btn.style.background;
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    btnText.textContent = 'Processing...';
+    btn.style.background = '#9ca3af';
+
+    const userId = document.getElementById('confirmActionUserId').value;
+    const actionType = document.getElementById('confirmActionType').value;
+    const endpoint = actionType === 'approve' ? '/api/kaon-admin/users/' + userId + '/approve/' : '/api/kaon-admin/users/' + userId + '/reject/';
+    const result = await apiPost(endpoint, {});
     if (result) {
-      showAlert('Approved successfully!', 'success');
+      bootstrap.Modal.getInstance(document.getElementById('confirmActionModal')).hide();
+      showAlert(actionType === 'approve' ? 'Approved successfully!' : 'Rejected successfully!', actionType === 'approve' ? 'success' : 'info');
       await loadUsers();
       await loadStats();
+    } else {
+      btn.disabled = false;
+      spinner.classList.add('d-none');
+      btnText.textContent = originalText;
+      btn.style.background = originalBg;
     }
   };
 
-  window.rejectUser = async function(userId) {
-    if (!confirm('Reject and delete this user? This cannot be undone.')) return;
-    const result = await apiPost('/api/kaon-admin/users/' + userId + '/reject/', {});
-    if (result) {
-      showAlert('Rejected successfully!', 'info');
-      await loadUsers();
-      await loadStats();
-    }
+  window.approveUser = function(userId) {
+    const icon = document.getElementById('confirmActionIcon');
+    icon.setAttribute('data-lucide', 'check-circle');
+    icon.style.color = '#16a34a';
+    document.getElementById('confirmActionTitle').textContent = 'Approve this user?';
+    document.getElementById('confirmActionDesc').textContent = 'This will activate their account and they will be able to log in.';
+    document.getElementById('confirmActionUserId').value = userId;
+    document.getElementById('confirmActionType').value = 'approve';
+    document.getElementById('confirmActionBtnText').textContent = 'Approve';
+    document.getElementById('confirmActionBtn').style.background = '#16a34a';
+    document.getElementById('confirmActionSpinner').classList.add('d-none');
+    document.getElementById('confirmActionBtn').disabled = false;
+    lucide.createIcons();
+    new bootstrap.Modal(document.getElementById('confirmActionModal')).show();
+  };
+
+  window.rejectUser = function(userId) {
+    const icon = document.getElementById('confirmActionIcon');
+    icon.setAttribute('data-lucide', 'x-circle');
+    icon.style.color = '#ef4444';
+    document.getElementById('confirmActionTitle').textContent = 'Reject this user?';
+    document.getElementById('confirmActionDesc').textContent = 'This will delete their account and cannot be undone.';
+    document.getElementById('confirmActionUserId').value = userId;
+    document.getElementById('confirmActionType').value = 'reject';
+    document.getElementById('confirmActionBtnText').textContent = 'Reject';
+    document.getElementById('confirmActionBtn').style.background = '#ef4444';
+    document.getElementById('confirmActionSpinner').classList.add('d-none');
+    document.getElementById('confirmActionBtn').disabled = false;
+    lucide.createIcons();
+    new bootstrap.Modal(document.getElementById('confirmActionModal')).show();
   };
 });
 </script>
