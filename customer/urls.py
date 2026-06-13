@@ -66,6 +66,7 @@ urlpatterns = [
     path('api/kaon-admin/users/<uuid:user_id>/edit/', views.admin_edit_user, name='admin-user-edit'),
     path('api/kaon-admin/orders/', views.admin_all_orders, name='admin-orders'),
     path('api/kaon-admin/feedback/', views.admin_feedback, name='admin-feedback'),
+    path('api/kaon-admin/feedback/<uuid:feedback_id>/delete/', views.admin_delete_feedback, name='admin-feedback-delete'),
     path('api/kaon-admin/menu/', views.admin_all_menu_items, name='admin-menu'),
     path('api/kaon-admin/stores/', views.admin_stores, name='admin-stores-list'),
     path('api/kaon-admin/stores/<uuid:user_id>/deactivate/', views.admin_deactivate_store, name='admin-store-deactivate'),

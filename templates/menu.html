@@ -4,6 +4,7 @@
 <style>
   .navbar { display: none !important; }
   body > .container, body .py-4 { max-width: none; padding: 0 !important; }
+  .category-pill.active { background: #ccff00; color: #1a1a1a; }
 </style>
 <div class="landing-bg">
   <div class="landing-grid">
@@ -177,6 +178,15 @@ if (qParam) {
 }
 
 const catPills = document.querySelectorAll('.category-pill');
+const catParam = urlParams.get('category');
+if (catParam) {
+  catPills.forEach(p => p.classList.remove('active'));
+  const match = document.querySelector(`.category-pill[data-category="${catParam}"]`);
+  if (match) {
+    match.classList.add('active');
+    currentCategory = catParam;
+  }
+}
 catPills.forEach(pill => {
   pill.addEventListener('click', function(e) {
     e.preventDefault();

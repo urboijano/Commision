@@ -826,6 +826,10 @@ body {
   background: #ccff00;
   color: #1a1a1a;
 }
+.category-pill.active {
+  background: #ccff00;
+  color: #1a1a1a;
+}
 
 .recommended-row {
   display: flex;

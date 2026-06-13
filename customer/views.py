@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.mail import EmailMultiAlternatives
 from django.db import IntegrityError, transaction, models
-from django.db.models import Exists, OuterRef, Sum
+from django.db.models import Exists, OuterRef, Sum, Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth import authenticate, login as django_login, logout as django_logout
 from django.contrib.auth.decorators import login_required
@@ -1426,9 +1426,49 @@ def admin_all_orders(request):
 def admin_feedback(request):
     if request.user.user_type != 'admin':
         return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
-    feedback = Feedback.objects.all().select_related('user', 'order').order_by('-created_at')
+    feedback = Feedback.objects.all().select_related('user', 'order').prefetch_related(
+        Prefetch('order__items', queryset=OrderItem.objects.select_related('store'))
+    ).order_by('-created_at')
     serializer = FeedbackSerializer(feedback, many=True)
     return Response(serializer.data)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def admin_delete_feedback(request, feedback_id):
+    if request.user.user_type != 'admin':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    feedback = get_object_or_404(Feedback, feedback_id=feedback_id)
+    user_email = feedback.user.email
+    user_name = feedback.user.full_name
+    order_number = feedback.order.order_number if feedback.order else 'N/A'
+    feedback.delete()
+    if user_email:
+        try:
+            html_content = f'''
+            <div style="max-width:480px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:2rem;">
+                <div style="text-align:center;margin-bottom:1.5rem;">
+                    <span style="font-size:1.5rem;font-weight:800;color:#1a1a1a;">KaonISU</span>
+                </div>
+                <div style="background:#fff;border-radius:16px;padding:1.5rem;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+                    <h2 style="font-size:1.1rem;font-weight:700;margin:0 0 0.5rem;">Feedback Removed</h2>
+                    <p style="color:#6b7280;font-size:0.9rem;margin:0 0 1rem;">Hi {user_name}, your feedback for order <strong>{order_number}</strong> has been removed by an administrator.</p>
+                    <p style="color:#9ca3af;font-size:0.8rem;margin:0;">If you have any questions, please contact support.</p>
+                </div>
+            </div>
+            '''
+            text_content = f'Hi {user_name}, your feedback for order {order_number} has been removed by an administrator.'
+            msg = EmailMultiAlternatives(
+                'Feedback Removed - KaonISU',
+                text_content,
+                settings.DEFAULT_FROM_EMAIL,
+                [user_email],
+            )
+            msg.attach_alternative(html_content, 'text/html')
+            msg.send(fail_silently=False)
+        except Exception:
+            pass
+    return Response({'message': 'Feedback deleted.'})
 
 
 @api_view(['GET'])

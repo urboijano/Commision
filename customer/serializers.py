@@ -339,11 +339,40 @@ class StoreOrderSerializer(serializers.ModelSerializer):
 class FeedbackSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.full_name', read_only=True)
     order_number = serializers.CharField(source='order.order_number', read_only=True)
+    store_names = serializers.SerializerMethodField()
+    food_names = serializers.SerializerMethodField()
+    has_food = serializers.SerializerMethodField()
+    has_bad_words = serializers.SerializerMethodField()
+    satisfaction_display = serializers.CharField(source='get_satisfaction_level_display', read_only=True)
 
     class Meta:
         model = Feedback
-        fields = ['feedback_id', 'order', 'order_number', 'user_name', 'rating', 'satisfaction_level', 'comments', 'created_at']
-        read_only_fields = ['feedback_id', 'created_at', 'user_name', 'order_number']
+        fields = ['feedback_id', 'order', 'order_number', 'user_name', 'store_names', 'food_names', 'has_food', 'has_bad_words', 'satisfaction_display', 'rating', 'satisfaction_level', 'comments', 'created_at']
+        read_only_fields = ['feedback_id', 'created_at', 'user_name', 'order_number', 'store_names', 'food_names', 'has_food', 'has_bad_words', 'satisfaction_display']
+
+    def get_store_names(self, obj):
+        stores = set()
+        for item in obj.order.items.all():
+            if item.store:
+                stores.add(item.store.name)
+        return list(stores)
+
+    def get_food_names(self, obj):
+        return [item.item_name for item in obj.order.items.all()]
+
+    def get_has_food(self, obj):
+        return obj.order.items.filter(store__isnull=False).exists()
+
+    def get_has_bad_words(self, obj):
+        BAD_WORDS = [
+            'fuck', 'shit', 'damn', 'bitch', 'ass', 'bastard', 'crap',
+            'stupid', 'idiot', 'dumb', 'hate', 'kill', 'die', 'wtf',
+            'putang', 'gago', 'bobo', 'tanga', 'ulol', 'lintik',
+        ]
+        if not obj.comments:
+            return False
+        comments_lower = obj.comments.lower()
+        return any(word in comments_lower for word in BAD_WORDS)
 
     def validate_rating(self, value):
         if value < 1 or value > 5:
