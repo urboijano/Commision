@@ -101,9 +101,6 @@
     <button class="store-nav-item" data-tab="analytics">
       <i data-lucide="bar-chart-3"></i> Analytics
     </button>
-    <button class="store-nav-item" data-tab="settings">
-      <i data-lucide="settings"></i> Settings
-    </button>
     <div class="store-sidebar-footer">
       <button class="store-nav-item" id="sidebarLogoutBtn">
         <i data-lucide="log-out"></i> Sign Out
@@ -262,55 +259,6 @@
       </div>
     </div>
 
-    <div id="tabSettings" class="dash-tab-content">
-      <div class="card">
-        <div class="card-header">
-          <h5>Store Settings</h5>
-        </div>
-        <div class="card-body">
-          <form id="settingsForm" style="max-width:600px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-              <div style="grid-column:1 / -1;">
-                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Store Name</label>
-                <input type="text" id="setStoreName" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.5rem 0.75rem;font-size:0.85rem;width:100%;" required>
-              </div>
-              <div style="grid-column:1 / -1;">
-                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Description</label>
-                <textarea id="setDescription" rows="3" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.5rem 0.75rem;font-size:0.85rem;width:100%;"></textarea>
-              </div>
-              <div>
-                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Contact Number</label>
-                <input type="text" id="setContactNumber" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.5rem 0.75rem;font-size:0.85rem;width:100%;">
-              </div>
-              <div>
-                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Address</label>
-                <input type="text" id="setAddress" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.5rem 0.75rem;font-size:0.85rem;width:100%;">
-              </div>
-              <div>
-                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Opening Time</label>
-                <input type="time" id="setOpeningTime" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.5rem 0.75rem;font-size:0.85rem;width:100%;">
-              </div>
-              <div>
-                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Closing Time</label>
-                <input type="time" id="setClosingTime" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.5rem 0.75rem;font-size:0.85rem;width:100%;">
-              </div>
-              <div style="grid-column:1 / -1;">
-                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Logo</label>
-                <input type="file" id="setLogo" accept="image/*" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.35rem 0.75rem;font-size:0.85rem;width:100%;">
-              </div>
-              <div style="grid-column:1 / -1;">
-                <label style="font-size:0.8rem;font-weight:600;color:#374151;">Banner</label>
-                <input type="file" id="setBanner" accept="image/*" class="form-control form-control-sm" style="border-radius:10px;border:1px solid #e5e7eb;padding:0.35rem 0.75rem;font-size:0.85rem;width:100%;">
-              </div>
-            </div>
-            <div style="margin-top:1rem;display:flex;gap:0.75rem;align-items:center;">
-              <button type="submit" class="btn btn-sm" style="background:#1a1a1a;color:#fff;font-weight:700;border-radius:10px;border:none;padding:0.5rem 1.5rem;font-size:0.85rem;">Save Settings</button>
-              <span id="settingsStatus" style="font-size:0.8rem;font-weight:600;"></span>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -399,7 +347,6 @@ const pageMeta = {
   orders: ['Orders', 'View all store orders'],
   menu: ['Menu', 'Manage your menu items'],
   feedback: ['Feedback', 'Review customer feedback'],
-  settings: ['Settings', 'Update your store profile'],
   analytics: ['Analytics', 'Store performance analytics'],
 };
 
@@ -618,17 +565,6 @@ async function loadFeedback() {
   const data = await apiGet('/api/store/feedback/');
   if (data) storeFeedback = data;
   renderFeedback();
-}
-
-async function loadSettings() {
-  const data = await apiGet('/api/store/profile/');
-  if (!data) return;
-  document.getElementById('setStoreName').value = data.store_name || '';
-  document.getElementById('setDescription').value = data.description || '';
-  document.getElementById('setContactNumber').value = data.contact_number || '';
-  document.getElementById('setAddress').value = data.address || '';
-  document.getElementById('setOpeningTime').value = data.opening_time || '';
-  document.getElementById('setClosingTime').value = data.closing_time || '';
 }
 
 let revenueChartInstance = null;
@@ -889,7 +825,6 @@ document.addEventListener('DOMContentLoaded', function () {
       const meta = pageMeta[tab] || ['', ''];
       document.getElementById('pageTitle').textContent = meta[0];
       document.getElementById('pageSubtitle').textContent = meta[1];
-      if (tab === 'settings') loadSettings();
       if (tab === 'analytics') loadAnalytics();
     });
   });
@@ -907,38 +842,6 @@ document.addEventListener('DOMContentLoaded', function () {
       stock: document.getElementById('itemStock').value,
     });
     btn.disabled = false;
-  });
-
-  document.getElementById('settingsForm').addEventListener('submit', async function (e) {
-    e.preventDefault();
-    const statusEl = document.getElementById('settingsStatus');
-    statusEl.textContent = 'Saving...';
-    statusEl.style.color = '#6b7280';
-    const formData = new FormData();
-    formData.append('store_name', document.getElementById('setStoreName').value);
-    formData.append('description', document.getElementById('setDescription').value);
-    formData.append('contact_number', document.getElementById('setContactNumber').value);
-    formData.append('address', document.getElementById('setAddress').value);
-    formData.append('opening_time', document.getElementById('setOpeningTime').value || '');
-    formData.append('closing_time', document.getElementById('setClosingTime').value || '');
-    const logoFile = document.getElementById('setLogo').files[0];
-    const bannerFile = document.getElementById('setBanner').files[0];
-    if (logoFile) formData.append('logo', logoFile);
-    if (bannerFile) formData.append('banner', bannerFile);
-    const token = localStorage.getItem('access_token');
-    try {
-      const res = await fetch('/api/store/profile/', {
-        method: 'PUT',
-        headers: { 'Authorization': 'Bearer ' + token },
-        body: formData,
-      });
-      if (!res.ok) throw new Error('Failed to save');
-      statusEl.textContent = 'Saved successfully!';
-      statusEl.style.color = '#16a34a';
-    } catch (err) {
-      statusEl.textContent = 'Failed to save. Try again.';
-      statusEl.style.color = '#ef4444';
-    }
   });
 
   document.getElementById('menuModal').addEventListener('hidden.bs.modal', function () {
