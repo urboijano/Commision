@@ -195,10 +195,17 @@ async function apiPatch(url, data) {
     return result;
 }
 
-async function apiDelete(url) {
-    const response = await apiRequest(url, { method: 'DELETE' });
+async function apiDelete(url, data) {
+    const options = { method: 'DELETE' };
+    if (data) options.body = JSON.stringify(data);
+    const response = await apiRequest(url, options);
     if (!response) return null;
-    return response.json().catch(() => ({}));
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        showAlert(extractError(result), 'danger');
+        return null;
+    }
+    return result;
 }
 
 document.addEventListener('DOMContentLoaded', function () {

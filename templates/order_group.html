@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% block title %}Orders Confirmed - KaonISU{% endblock %}
+{% block content %}
+<style>
+  .navbar { display: none !important; }
+  body > .container, body .py-4 { max-width: none; padding: 0 !important; }
+</style>
+<div class="landing-bg">
+  <div class="landing-grid">
+    <div class="landing-main">
+      <div class="main-container">
+
+        <div class="main-header">
+          <div class="brand-mark">KaonISU <i data-lucide="utensils-crossed" class="brand-icon"></i></div>
+          <div class="welcome-actions">
+            <a href="/orders/" class="icon-btn" title="My Orders">
+              <i data-lucide="clipboard-list"></i>
+            </a>
+            <div style="position:relative;">
+              <button class="icon-btn" id="profileBtn" title="Profile" style="border:none;background:none;cursor:pointer;">
+                <i data-lucide="user"></i>
+              </button>
+              <div id="profileDropdown" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.12);padding:1rem;min-width:220px;z-index:1100;">
+                <div style="font-size:0.85rem;font-weight:700;color:#1a1a1a;margin-bottom:0.25rem;">{{ user.full_name }}</div>
+                {% if user.student_faculty_id %}
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.15rem;">ID: {{ user.student_faculty_id }}</div>
+                {% endif %}
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.75rem;word-break:break-all;"><strong style="color:#374151;">Email:</strong> {{ user.email }}</div>
+                {% if user.user_type == 'admin' or user.user_type == 'store_owner' %}
+                <a href="{% if user.user_type == 'admin' %}/kaon-admin/{% else %}/dashboard/{% endif %}" style="display:block;padding:0.5rem;border-radius:8px;background:#f3f4f6;color:#1a1a1a;font-size:0.8rem;font-weight:600;text-decoration:none;text-align:center;transition:background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">Dashboard</a>
+                {% else %}
+                <button onclick="handleLogout()" style="display:block;width:100%;padding:0.5rem;border:none;border-radius:8px;background:#fee2e2;color:#dc2626;font-size:0.8rem;font-weight:600;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">Logout</button>
+                {% endif %}
+              </div>
+            </div>
+            <a href="/menu/" class="icon-btn" title="Back to menu">
+              <i data-lucide="arrow-left"></i>
+            </a>
+          </div>
+        </div>
+
+        <div class="main-body">
+          <div id="orderContent" style="width:100%;">
+            <div style="width:100%;text-align:center;padding:3rem;">
+              <div class="spinner-border" style="width:2rem;height:2rem;color:#1a1a1a;" role="status"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="landing-sidebar">
+      <div class="sidebar-card" style="display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;gap:0.5rem;font-weight:700;font-size:0.9rem;margin-bottom:1rem;">
+          <i data-lucide="info" style="width:18px;height:18px;color:#ccff00;"></i>
+          <span>Next Steps</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+          <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+            <div style="width:28px;height:28px;border-radius:50%;background:#ccff00;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.75rem;font-weight:800;color:#1a1a1a;">1</div>
+            <div>
+              <h6 style="font-size:0.85rem;font-weight:700;margin-bottom:0.1rem;">Save Your Order Numbers</h6>
+              <p style="font-size:0.78rem;color:#6b7280;margin:0;">Keep your order number(s) handy — you'll need them when picking up.</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+            <div style="width:28px;height:28px;border-radius:50%;background:#ccff00;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.75rem;font-weight:800;color:#1a1a1a;">2</div>
+            <div>
+              <h6 style="font-size:0.85rem;font-weight:700;margin-bottom:0.1rem;">Visit Each Store</h6>
+              <p style="font-size:0.78rem;color:#6b7280;margin:0;">Your items are from multiple stores. Go to each store to pick up and pay.</p>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+            <div style="width:28px;height:28px;border-radius:50%;background:#ccff00;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:0.75rem;font-weight:800;color:#1a1a1a;">3</div>
+            <div>
+              <h6 style="font-size:0.85rem;font-weight:700;margin-bottom:0.1rem;">Show Order Number</h6>
+              <p style="font-size:0.78rem;color:#6b7280;margin:0;">Present the corresponding order number at each store and pay in cash.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-card" id="orderSummarySidebar">
+        <div style="display:flex;align-items:center;gap:0.5rem;font-weight:700;font-size:0.9rem;margin-bottom:1rem;">
+          <i data-lucide="receipt" style="width:18px;height:18px;color:#ccff00;"></i>
+          <span>Order Summary</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:#6b7280;margin-bottom:0.5rem;">
+          <span>Total Stores</span>
+          <span id="sidebarStoreCount" style="font-weight:600;color:#1a1a1a;">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:#6b7280;margin-bottom:0.5rem;">
+          <span>Total Items</span>
+          <span id="sidebarItemCount" style="font-weight:600;color:#1a1a1a;">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:1rem;font-weight:800;padding-top:0.75rem;border-top:1px solid #f3f4f6;margin-bottom:1rem;">
+          <span>Total</span>
+          <span id="sidebarTotal" style="color:#1a1a1a;">—</span>
+        </div>
+        <a href="/orders/" class="order-btn" style="font-size:0.85rem;padding:0.7rem;text-decoration:none;">
+          <i data-lucide="clipboard-list" style="width:15px;height:15px;"></i> View All Orders
+        </a>
+      </div>
+
+      <a href="/menu/" class="sidebar-card" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;cursor:pointer;color:inherit;transition:transform 0.2s,box-shadow 0.2s;"
+        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)'"
+        onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div style="width:44px;height:44px;border-radius:12px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;">
+          <i data-lucide="plus" style="width:20px;height:20px;color:#1a1a1a;"></i>
+        </div>
+        <div>
+          <h5 style="font-size:0.9rem;font-weight:700;margin-bottom:0.1rem;">Order Again</h5>
+          <p style="font-size:0.8rem;margin:0;color:#6b7280;">Browse the menu and place another order</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const groupId = '{{ group_id }}';
+
+function getItemBg(name) {
+  const colors = ['#e8f5e9', '#fff3e0', '#fce4ec', '#e3f2fd', '#f3e5f5', '#e0f7fa', '#fff8e1', '#fbe9e7'];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function getItemIcon(category) {
+  const map = { rice: 'wheat', noodles: 'utensils-crossed', drinks: 'cup-soda', snacks: 'popcorn', desserts: 'cake-slice' };
+  return map[category] || 'coffee';
+}
+
+async function loadOrders() {
+  const orders = await apiGet(`/api/orders/group/${groupId}/`);
+  const container = document.getElementById('orderContent');
+
+  if (!orders || !orders.length) {
+    container.innerHTML = '<div style="text-align:center;padding:3rem;color:#ef4444;font-weight:600;">Failed to load orders.</div>';
+    return;
+  }
+
+  const totalItems = orders.reduce((sum, o) => sum + (o.items ? o.items.length : 0), 0);
+  const grandTotal = orders.reduce((sum, o) => sum + parseFloat(o.total_amount || 0), 0);
+
+  document.getElementById('sidebarStoreCount').textContent = orders.length;
+  document.getElementById('sidebarItemCount').textContent = totalItems;
+  document.getElementById('sidebarTotal').textContent = `₱${grandTotal.toFixed(2)}`;
+
+  container.innerHTML = `
+    <div style="width:100%;">
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <div style="width:72px;height:72px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+          <i data-lucide="check-circle" style="width:36px;height:36px;color:#22c55e;"></i>
+        </div>
+        <h2 style="font-size:1.6rem;font-weight:800;margin-bottom:0.25rem;color:#1a1a1a;">Orders Confirmed!</h2>
+        <p style="font-size:0.9rem;color:#6b7280;margin-bottom:1.5rem;">Your orders from ${orders.length} store${orders.length > 1 ? 's' : ''} have been placed.</p>
+      </div>
+
+      ${orders.map((order, oi) => {
+        const storeName = order.items && order.items.length > 0 ? (order.items[0].store_name || 'Store') : 'Store';
+        return `
+          <div style="margin-bottom:1.25rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;padding:0 0.25rem;">
+              <div style="display:flex;align-items:center;gap:0.4rem;">
+                <i data-lucide="store" style="width:16px;height:16px;color:#f97316;"></i>
+                <strong style="font-size:0.9rem;color:#1a1a1a;">${storeName}</strong>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <span style="font-size:0.7rem;font-weight:700;color:#6b7280;background:#f3f4f6;padding:0.2rem 0.6rem;border-radius:2rem;">${order.order_number}</span>
+                <span style="font-size:0.75rem;font-weight:600;color:#f59e0b;background:#fef3c7;padding:0.2rem 0.6rem;border-radius:2rem;">${order.status_display || 'Pending'}</span>
+              </div>
+            </div>
+            <div style="background:#fafafa;border-radius:14px;overflow:hidden;">
+              ${order.items.map((item, idx) => `
+                <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;${idx < order.items.length - 1 ? 'border-bottom:1px solid #f0f0f0;' : ''}">
+                  <div style="width:44px;height:44px;border-radius:10px;background:${getItemBg(item.item_name)};display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+                    ${item.item_image ? `<img src="${item.item_image}" alt="${item.item_name}" style="width:100%;height:100%;object-fit:cover;">` : `<i data-lucide="${getItemIcon(item.category || '')}" style="width:18px;height:18px;color:#6b7280;"></i>`}
+                  </div>
+                  <div style="flex:1;min-width:0;">
+                    <h6 style="font-size:0.85rem;font-weight:700;margin-bottom:0.05rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.item_name}</h6>
+                    <small style="color:#6b7280;font-size:0.75rem;">₱${parseFloat(item.unit_price).toFixed(2)} x ${item.quantity}</small>
+                  </div>
+                  <span style="font-weight:800;font-size:0.9rem;color:#1a1a1a;white-space:nowrap;">₱${parseFloat(item.subtotal).toFixed(2)}</span>
+                </div>
+              `).join('')}
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:0.85rem 1rem;background:#fff;border-top:2px solid #f0f0f0;">
+                <span style="font-weight:700;font-size:0.85rem;color:#6b7280;">${storeName} Total</span>
+                <span style="font-weight:800;font-size:1rem;color:#1a1a1a;">₱${parseFloat(order.total_amount).toFixed(2)}</span>
+              </div>
+            </div>
+            <div style="text-align:right;margin-top:0.4rem;">
+              <a href="/order/${order.order_id}/track/" style="font-size:0.75rem;color:#4f46e5;font-weight:600;text-decoration:none;">
+                Track <i data-lucide="arrow-right" style="width:12px;height:12px;vertical-align:middle;"></i>
+              </a>
+            </div>
+          </div>
+        `;
+      }).join('')}
+
+      <div style="background:#1a1a1a;border-radius:16px;padding:1.25rem 1.5rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+        <span style="font-weight:700;font-size:1rem;color:#fff;">Grand Total</span>
+        <span style="font-weight:800;font-size:1.3rem;color:#ccff00;">₱${grandTotal.toFixed(2)}</span>
+      </div>
+
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <p style="font-size:0.8rem;color:#6b7280;margin:0;">
+          <i data-lucide="wallet" style="width:14px;height:14px;vertical-align:middle;"></i> Pay cash at each store when you collect your order.
+        </p>
+      </div>
+    </div>
+  `;
+
+  lucide.createIcons();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  lucide.createIcons();
+  loadOrders();
+
+  document.getElementById('profileBtn')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const dd = document.getElementById('profileDropdown');
+    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+  });
+  document.addEventListener('click', function() {
+    const dd = document.getElementById('profileDropdown');
+    if (dd) dd.style.display = 'none';
+  });
+});
+</script>
+{% endblock %}

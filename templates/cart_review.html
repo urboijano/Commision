@@ -127,7 +127,10 @@
         <p class="text-muted small" style="margin-bottom:1.25rem;">All items will be removed from your cart.</p>
         <div style="display:flex;gap:0.5rem;justify-content:center;">
           <button class="btn btn-sm" style="background:#f3f4f6;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-sm" id="confirmClearCart" style="background:#ef4444;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;">Clear</button>
+          <button class="btn btn-sm" id="confirmClearCart" style="background:#ef4444;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;">
+            <span id="clearCartSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+            <span id="clearCartText">Clear</span>
+          </button>
         </div>
       </div>
     </div>
@@ -180,31 +183,46 @@ async function loadCart() {
 
   document.getElementById('cartItemCount').textContent = data.items.length;
 
-  container.innerHTML = data.items.map(item => `
-    <div class="sidebar-card" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;margin-bottom:0.5rem;">
-      <div style="width:48px;height:48px;border-radius:12px;background:${getItemBg(item.item_name)};display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;${item.item_image ? 'padding:0;' : ''}">
-        ${item.item_image ? `<img src="${item.item_image}" alt="${item.item_name}" style="width:100%;height:100%;object-fit:cover;">` : `<i data-lucide="${getItemIcon(item.category || '')}" style="width:20px;height:20px;color:#6b7280;"></i>`}
+  const storeGroups = {};
+  data.items.forEach(item => {
+    const store = item.store_name || 'Store';
+    if (!storeGroups[store]) storeGroups[store] = [];
+    storeGroups[store].push(item);
+  });
+
+  container.innerHTML = Object.entries(storeGroups).map(([store, items]) => `
+    <div style="margin-bottom:0.75rem;">
+      <div style="display:flex;align-items:center;gap:0.35rem;padding:0.35rem 0.5rem;margin-bottom:0.35rem;">
+        <i data-lucide="store" style="width:14px;height:14px;color:#f97316;"></i>
+        <span style="font-size:0.78rem;font-weight:700;color:#374151;">${store}</span>
       </div>
-      <div style="flex:1;min-width:0;">
-        <h6 style="font-size:0.85rem;font-weight:700;margin-bottom:0.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.item_name}</h6>
-        <small style="color:#6b7280;font-size:0.75rem;">₱${parseFloat(item.item_price).toFixed(2)} each</small>
-      </div>
-      <div style="display:flex;align-items:center;gap:0.25rem;">
-        <button class="qty-minus" data-id="${item.cart_item_id}"
-          style="width:28px;height:28px;border-radius:50%;border:1.5px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;transition:all 0.15s;"
-          onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#fff'">−</button>
-        <span class="qty-display" data-id="${item.cart_item_id}" style="font-weight:700;font-size:0.85rem;min-width:24px;text-align:center;">${item.quantity}</span>
-        <button class="qty-plus" data-id="${item.cart_item_id}"
-          style="width:28px;height:28px;border-radius:50%;border:1.5px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;transition:all 0.15s;"
-          onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#fff'">+</button>
-      </div>
-      <div style="text-align:right;min-width:65px;">
-        <span style="font-weight:800;font-size:0.9rem;color:#1a1a1a;">₱${parseFloat(item.subtotal).toFixed(2)}</span>
-        <br>
-        <button class="remove-item" data-id="${item.cart_item_id}"
-          style="border:none;background:none;color:#9ca3af;font-size:0.7rem;cursor:pointer;padding:0;text-decoration:underline;transition:color 0.15s;"
-          onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#9ca3af'">Remove</button>
-      </div>
+      ${items.map(item => `
+        <div class="sidebar-card" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;margin-bottom:0.35rem;">
+          <div style="width:48px;height:48px;border-radius:12px;background:${getItemBg(item.item_name)};display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;${item.item_image ? 'padding:0;' : ''}">
+            ${item.item_image ? `<img src="${item.item_image}" alt="${item.item_name}" style="width:100%;height:100%;object-fit:cover;">` : `<i data-lucide="${getItemIcon(item.category || '')}" style="width:20px;height:20px;color:#6b7280;"></i>`}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <h6 style="font-size:0.85rem;font-weight:700;margin-bottom:0.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.item_name}</h6>
+            <small style="color:#6b7280;font-size:0.75rem;">₱${parseFloat(item.item_price).toFixed(2)} each</small>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.25rem;">
+            <button class="qty-minus" data-id="${item.cart_item_id}"
+              style="width:28px;height:28px;border-radius:50%;border:1.5px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;transition:all 0.15s;"
+              onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#fff'">−</button>
+            <span class="qty-display" data-id="${item.cart_item_id}" style="font-weight:700;font-size:0.85rem;min-width:24px;text-align:center;">${item.quantity}</span>
+            <button class="qty-plus" data-id="${item.cart_item_id}"
+              style="width:28px;height:28px;border-radius:50%;border:1.5px solid #e5e7eb;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;transition:all 0.15s;"
+              onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#fff'">+</button>
+          </div>
+          <div style="text-align:right;min-width:65px;">
+            <span style="font-weight:800;font-size:0.9rem;color:#1a1a1a;">₱${parseFloat(item.subtotal).toFixed(2)}</span>
+            <br>
+            <button class="remove-item" data-id="${item.cart_item_id}"
+              style="border:none;background:none;color:#9ca3af;font-size:0.7rem;cursor:pointer;padding:0;text-decoration:underline;transition:color 0.15s;"
+              onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#9ca3af'">Remove</button>
+          </div>
+        </div>
+      `).join('')}
     </div>
   `).join('');
 
@@ -262,10 +280,11 @@ document.getElementById('confirmOrderBtn')?.addEventListener('click', async func
 
   const result = await apiPost('/api/orders/place/', {});
 
-  if (result && result.order_number) {
-    showToast(`Order #${result.order_number} placed successfully!`, 'success');
+  if (result && result.orders && result.orders.length > 0) {
+    const orderNums = result.orders.map(o => o.order_number).join(', ');
+    showToast(`Order${result.orders.length > 1 ? 's' : ''} ${orderNums} placed successfully!`, 'success');
     setTimeout(() => {
-      window.location.href = `/order/${result.order_id}/`;
+      window.location.href = `/order/group/${result.group_id}/`;
     }, 1000);
   } else {
     this.disabled = false;
@@ -279,10 +298,25 @@ document.getElementById('clearCartBtn')?.addEventListener('click', function() {
 });
 
 document.getElementById('confirmClearCart')?.addEventListener('click', async function() {
-  bootstrap.Modal.getInstance(document.getElementById('clearCartModal')).hide();
+  const btn = this;
+  const spinner = document.getElementById('clearCartSpinner');
+  const btnText = document.getElementById('clearCartText');
+  const originalText = btnText.textContent;
+  const originalBg = btn.style.background;
+  btn.disabled = true;
+  spinner.classList.remove('d-none');
+  btnText.textContent = 'Clearing...';
+  btn.style.background = '#9ca3af';
+
   await apiDelete('/api/cart/clear/');
+  bootstrap.Modal.getInstance(document.getElementById('clearCartModal')).hide();
   loadCart();
   updateGlobalCart();
+
+  btn.disabled = false;
+  spinner.classList.add('d-none');
+  btnText.textContent = originalText;
+  btn.style.background = originalBg;
 });
 
 function showToast(msg) {

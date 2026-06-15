@@ -232,13 +232,27 @@ class CartItemSerializer(serializers.ModelSerializer):
     item_price = serializers.DecimalField(source='item.price', max_digits=8, decimal_places=2, read_only=True)
     item_image = serializers.URLField(source='item.image_url', read_only=True)
     subtotal = serializers.SerializerMethodField()
+    store_name = serializers.SerializerMethodField()
+    store_owner_id = serializers.SerializerMethodField()
 
     class Meta:
         model = CartItem
-        fields = ['cart_item_id', 'item', 'item_name', 'item_price', 'item_image', 'quantity', 'subtotal']
+        fields = ['cart_item_id', 'item', 'item_name', 'item_price', 'item_image', 'quantity', 'subtotal', 'store_name', 'store_owner_id']
 
     def get_subtotal(self, obj):
         return obj.item.price * obj.quantity
+
+    def get_store_name(self, obj):
+        if obj.item.store:
+            return obj.item.store.name
+        if obj.item.store_owner:
+            return obj.item.store_owner.store_name
+        return ''
+
+    def get_store_owner_id(self, obj):
+        if obj.item.store_owner:
+            return str(obj.item.store_owner.user_id)
+        return ''
 
 
 class CartSerializer(serializers.ModelSerializer):
@@ -284,10 +298,18 @@ class UpdateCartItemSerializer(serializers.Serializer):
 class OrderItemSerializer(serializers.ModelSerializer):
     item_image = serializers.URLField(source='item.image_url', read_only=True, default='')
     category = serializers.CharField(source='item.category', read_only=True, default='')
+    store_name = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
-        fields = ['order_item_id', 'item_id', 'item_name', 'unit_price', 'quantity', 'subtotal', 'item_image', 'category']
+        fields = ['order_item_id', 'item_id', 'item_name', 'unit_price', 'quantity', 'subtotal', 'item_image', 'category', 'store_name']
+
+    def get_store_name(self, obj):
+        if obj.store:
+            return obj.store.name
+        if obj.store_owner:
+            return obj.store_owner.store_name
+        return ''
 
 
 class OrderStatusHistorySerializer(serializers.ModelSerializer):
@@ -308,17 +330,25 @@ class OrderSerializer(serializers.ModelSerializer):
             'order_id', 'order_number', 'total_amount', 'status',
             'status_display', 'payment_status', 'items', 'status_history',
             'notes', 'rejection_reason', 'estimated_ready_at',
-            'created_at', 'updated_at', 'user'
+            'parent_order_group', 'created_at', 'updated_at', 'user'
         ]
 
 
 class StoreOrderItemSerializer(serializers.ModelSerializer):
     item_image = serializers.URLField(source='item.image_url', read_only=True, default='')
     category = serializers.CharField(source='item.category', read_only=True, default='')
+    store_name = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
-        fields = ['order_item_id', 'item_name', 'unit_price', 'quantity', 'subtotal', 'item_image', 'category']
+        fields = ['order_item_id', 'item_name', 'unit_price', 'quantity', 'subtotal', 'item_image', 'category', 'store_name']
+
+    def get_store_name(self, obj):
+        if obj.store:
+            return obj.store.name
+        if obj.store_owner:
+            return obj.store_owner.store_name
+        return ''
 
 
 class StoreOrderSerializer(serializers.ModelSerializer):

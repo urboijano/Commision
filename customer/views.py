@@ -440,8 +440,9 @@ def clear_cart(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def place_order(request):
+    import uuid as uuid_mod
     cart = get_object_or_404(Cart, user=request.user)
-    cart_items = CartItem.objects.filter(cart=cart).select_related('item__store_owner')
+    cart_items = CartItem.objects.filter(cart=cart).select_related('item__store_owner', 'item__store')
 
     if not cart_items.exists():
         return Response(
@@ -461,41 +462,67 @@ def place_order(request):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    first_item = cart_items.first().item
-    store_name = first_item.store_owner.store_name.strip() if first_item.store_owner and first_item.store_owner.store_name.strip() else 'Store'
+    from collections import defaultdict
+    store_groups = defaultdict(list)
+    for ci in cart_items:
+        owner_id = ci.item.store_owner.user_id if ci.item.store_owner else None
+        store_groups[owner_id].append(ci)
+
+    group_id = uuid_mod.uuid4()
+    orders = []
 
     with transaction.atomic():
-        total = sum(ci.item.price * ci.quantity for ci in cart_items)
-        order = Order.objects.create(
-            user=request.user,
-            total_amount=total,
-        )
+        for owner_id, items in store_groups.items():
+            total = sum(ci.item.price * ci.quantity for ci in items)
+            store_owner = items[0].item.store_owner
+            store_name = store_owner.store_name.strip() if store_owner and store_owner.store_name.strip() else 'Store'
 
-        for ci in cart_items:
-            OrderItem.objects.create(
-                order=order,
-                item=ci.item,
-                item_name=ci.item.name,
-                unit_price=ci.item.price,
-                quantity=ci.quantity,
-                subtotal=ci.item.price * ci.quantity,
-                store_owner=ci.item.store_owner,
-                store=ci.item.store,
+            order = Order.objects.create(
+                user=request.user,
+                total_amount=total,
+                parent_order_group=group_id,
             )
 
-            ci.item.stock -= ci.quantity
-            ci.item.save()
+            for ci in items:
+                OrderItem.objects.create(
+                    order=order,
+                    item=ci.item,
+                    item_name=ci.item.name,
+                    unit_price=ci.item.price,
+                    quantity=ci.quantity,
+                    subtotal=ci.item.price * ci.quantity,
+                    store_owner=ci.item.store_owner,
+                    store=ci.item.store,
+                )
 
-        OrderStatusHistory.objects.create(
-            order=order,
-            status='pending',
-            changed_by=store_name,
-        )
+                ci.item.stock -= ci.quantity
+                ci.item.save()
+
+            OrderStatusHistory.objects.create(
+                order=order,
+                status='pending',
+                changed_by=store_name,
+            )
+
+            orders.append(order)
 
         cart.items.all().delete()
 
-    serializer = OrderSerializer(order)
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
+    serializer = OrderSerializer(orders, many=True)
+    return Response({
+        'orders': serializer.data,
+        'group_id': group_id,
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def order_group(request, group_id):
+    orders = Order.objects.filter(
+        user=request.user, parent_order_group=group_id
+    ).prefetch_related('items', 'status_history').order_by('created_at')
+    serializer = OrderSerializer(orders, many=True)
+    return Response(serializer.data)
 
 
 @api_view(['GET'])
@@ -811,8 +838,12 @@ def store_analytics_summary(request):
     store_orders_qs = Order.objects.filter(items__store_owner=request.user).distinct()
     today_orders = store_orders_qs.filter(created_at__date=today)
     completed_orders = store_orders_qs.filter(status='completed')
-    total_revenue = completed_orders.aggregate(total=models.Sum('total_amount'))['total'] or 0
-    today_revenue = today_orders.filter(status='completed').aggregate(total=models.Sum('total_amount'))['total'] or 0
+    total_revenue = OrderItem.objects.filter(
+        order__in=completed_orders, store_owner=request.user
+    ).aggregate(total=models.Sum('subtotal'))['total'] or 0
+    today_revenue = OrderItem.objects.filter(
+        order__in=today_orders.filter(status='completed'), store_owner=request.user
+    ).aggregate(total=models.Sum('subtotal'))['total'] or 0
     total_orders = completed_orders.count()
     today_order_count = today_orders.count()
     menu_count = MenuItem.objects.filter(store_owner=request.user).count()
@@ -1481,6 +1512,59 @@ def admin_all_menu_items(request):
     return Response(serializer.data)
 
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def admin_delete_menu_item(request, item_id):
+    if request.user.user_type != 'admin':
+        return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+    item = get_object_or_404(MenuItem, item_id=item_id)
+    reason = request.data.get('reason', '')
+    if not reason and request.body:
+        try:
+            body_data = json.loads(request.body)
+            reason = body_data.get('reason', '')
+        except (json.JSONDecodeError, AttributeError):
+            pass
+
+    owner_name = item.store_owner.full_name if item.store_owner else ''
+    owner_email = item.store_owner.email if item.store_owner else None
+    item_name = item.name
+
+    item.delete()
+
+    if owner_email:
+        html_content = f'''
+        <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04);font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;">
+          <div style="background:#1a1a1a;padding:1.5rem;text-align:center;">
+            <span style="font-size:1.4rem;font-weight:800;color:#ccff00;">KaonISU</span>
+          </div>
+          <div style="padding:1.5rem;">
+            <h2 style="font-size:1.1rem;font-weight:700;color:#1a1a1a;margin:0 0 0.5rem;">Menu Item Removed</h2>
+            <p style="font-size:0.85rem;color:#6b7280;margin:0 0 0.5rem;">Hi {owner_name},</p>
+            <p style="font-size:0.85rem;color:#6b7280;margin:0 0 0.5rem;">Your menu item <strong>{item_name}</strong> has been removed by an administrator.</p>
+            {f'<p style="font-size:0.85rem;color:#6b7280;margin:0;">Reason: {reason}</p>' if reason else ''}
+          </div>
+          <div style="background:#f9fafb;padding:1rem;text-align:center;border-top:1px solid #f0f0f0;">
+            <span style="font-size:0.75rem;color:#9ca3af;">&copy; 2026 KaonISU. All rights reserved.</span>
+          </div>
+        </div>
+        '''
+        text_content = f'Hi {owner_name}, your menu item "{item_name}" has been removed by an administrator.{" Reason: " + reason if reason else ""}'
+        try:
+            msg = EmailMultiAlternatives(
+                'Menu Item Removed - KaonISU',
+                text_content,
+                settings.DEFAULT_FROM_EMAIL,
+                [owner_email],
+            )
+            msg.attach_alternative(html_content, 'text/html')
+            msg.send(fail_silently=False)
+        except Exception:
+            pass
+
+    return Response({'message': 'Menu item deleted.'})
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def admin_stores(request):
@@ -1635,6 +1719,11 @@ def cart_page(request):
 @login_required
 def order_confirmation_page(request, order_id):
     return render(request, 'order_confirmation.html', {'order_id': order_id})
+
+
+@login_required
+def order_group_page(request, group_id):
+    return render(request, 'order_group.html', {'group_id': group_id})
 
 
 @login_required

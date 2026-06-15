@@ -259,7 +259,10 @@
         <input type="hidden" id="deleteUserId">
         <div style="display:flex;gap:0.5rem;justify-content:center;">
           <button class="btn btn-sm" style="background:#f3f4f6;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-sm" style="background:#ef4444;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" id="confirmDeleteUser">Delete</button>
+          <button class="btn btn-sm" style="background:#ef4444;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" id="confirmDeleteUser">
+            <span id="confirmDeleteUserSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+            <span id="confirmDeleteUserText">Delete</span>
+          </button>
         </div>
       </div>
     </div>
@@ -276,7 +279,10 @@
         <input type="hidden" id="deleteFeedbackId">
         <div style="display:flex;gap:0.5rem;justify-content:center;">
           <button class="btn btn-sm" style="background:#f3f4f6;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-sm" style="background:#ef4444;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" id="confirmDeleteFeedback">Delete</button>
+          <button class="btn btn-sm" style="background:#ef4444;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" id="confirmDeleteFeedback">
+            <span id="confirmDeleteFeedbackSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+            <span id="confirmDeleteFeedbackText">Delete</span>
+          </button>
         </div>
       </div>
     </div>
@@ -387,6 +393,43 @@
       <div class="modal-footer" style="border-top:1px solid #f0f0f0;padding:1rem 1.5rem;">
         <button class="btn btn-sm" style="background:#f3f4f6;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
         <button class="btn btn-sm" style="background:#1a1a1a;color:#ccff00;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" id="saveEditUser">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="deleteMenuItemModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.12);">
+      <div class="modal-header" style="border-bottom:1px solid #f0f0f0;padding:1.25rem 1.5rem;">
+        <h5 style="font-weight:800;margin:0;font-size:1.1rem;"><i data-lucide="alert-triangle" style="width:18px;height:18px;color:#ef4444;margin-right:0.5rem;vertical-align:text-bottom;"></i> Delete Menu Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="padding:1.5rem;">
+        <p class="text-muted small" style="margin-bottom:1.25rem;" id="deleteMenuItemName"></p>
+        <input type="hidden" id="deleteMenuItemId">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div>
+            <label class="small text-muted" style="display:block;margin-bottom:0.5rem;font-weight:600;">Quick reason:</label>
+            <div style="display:flex;flex-direction:column;gap:0.35rem;">
+              <button type="button" class="reason-chip" data-reason="Not suitable for school" style="width:100%;text-align:left;padding:0.4rem 0.65rem;border:1px solid #e5e7eb;border-radius:8px;background:#fff;font-size:0.75rem;cursor:pointer;color:#374151;font-weight:500;transition:all 0.15s;">Not suitable for school</button>
+              <button type="button" class="reason-chip" data-reason="Troll / Spam post" style="width:100%;text-align:left;padding:0.4rem 0.65rem;border:1px solid #e5e7eb;border-radius:8px;background:#fff;font-size:0.75rem;cursor:pointer;color:#374151;font-weight:500;transition:all 0.15s;">Troll / Spam post</button>
+              <button type="button" class="reason-chip" data-reason="Inappropriate content" style="width:100%;text-align:left;padding:0.4rem 0.65rem;border:1px solid #e5e7eb;border-radius:8px;background:#fff;font-size:0.75rem;cursor:pointer;color:#374151;font-weight:500;transition:all 0.15s;">Inappropriate content</button>
+              <button type="button" class="reason-chip" data-reason="Duplicate item" style="width:100%;text-align:left;padding:0.4rem 0.65rem;border:1px solid #e5e7eb;border-radius:8px;background:#fff;font-size:0.75rem;cursor:pointer;color:#374151;font-weight:500;transition:all 0.15s;">Duplicate item</button>
+            </div>
+          </div>
+          <div>
+            <label class="small text-muted" style="display:block;margin-bottom:0.5rem;font-weight:600;">Custom reason:</label>
+            <textarea id="deleteMenuItemReason" rows="5" style="width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:0.5rem;font-size:0.8rem;resize:none;" placeholder="Type a reason..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid #f0f0f0;padding:1rem 1.5rem;">
+        <button class="btn btn-sm" style="background:#f3f4f6;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-sm" style="background:#ef4444;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" id="confirmDeleteMenuItem">
+          <span id="deleteMenuItemSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+          <span id="deleteMenuItemText">Delete</span>
+        </button>
       </div>
     </div>
   </div>
@@ -609,7 +652,7 @@ function openStoreMenu(storeName) {
     body.innerHTML =
       '<table class="admin-table">' +
         '<thead>' +
-          '<tr><th style="padding:0.5rem 0.65rem;">Item</th><th style="padding:0.5rem 0.65rem;">Price</th><th style="padding:0.5rem 0.65rem;">Category</th></tr>' +
+          '<tr><th style="padding:0.5rem 0.65rem;">Item</th><th style="padding:0.5rem 0.65rem;">Price</th><th style="padding:0.5rem 0.65rem;">Category</th><th style="padding:0.5rem 0.65rem;width:50px;">Action</th></tr>' +
         '</thead>' +
         '<tbody>' +
           available.map(item =>
@@ -620,6 +663,7 @@ function openStoreMenu(storeName) {
               '</div></td>' +
               '<td style="padding:0.55rem 0.65rem;" class="text-muted">₱' + parseFloat(item.price).toFixed(2) + '</td>' +
               '<td style="padding:0.55rem 0.65rem;"><span class="badge-status" style="background:#f3f4f6;color:#6b7280;">' + (item.category_display || item.category) + '</span></td>' +
+              '<td style="padding:0.55rem 0.65rem;"><button class="icon-btn admin-delete-menu-item" style="width:30px;height:30px;color:#ef4444;font-size:0.85rem;display:inline-flex;" data-item-id="' + item.item_id + '" data-item-name="' + escapeHtml(item.name) + '" title="Delete"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button></td>' +
             '</tr>'
           ).join('') +
         '</tbody>' +
@@ -628,6 +672,55 @@ function openStoreMenu(storeName) {
   lucide.createIcons();
   new bootstrap.Modal(document.getElementById('storeMenuModal')).show();
 }
+
+document.getElementById('storeMenuModalBody').addEventListener('click', function(e) {
+  const btn = e.target.closest('.admin-delete-menu-item');
+  if (btn) {
+    const itemId = Number(btn.dataset.itemId);
+    const itemName = btn.dataset.itemName;
+    document.getElementById('deleteMenuItemId').value = itemId;
+    document.getElementById('deleteMenuItemName').textContent = '"' + itemName + '"';
+    document.getElementById('deleteMenuItemReason').value = '';
+    document.querySelectorAll('.reason-chip').forEach(c => c.style.background = '#fff');
+    new bootstrap.Modal(document.getElementById('deleteMenuItemModal')).show();
+  }
+});
+
+document.querySelectorAll('.reason-chip').forEach(chip => {
+  chip.addEventListener('click', function() {
+    document.querySelectorAll('.reason-chip').forEach(c => c.style.background = '#fff');
+    this.style.background = '#fef2f2';
+    document.getElementById('deleteMenuItemReason').value = this.dataset.reason;
+  });
+});
+
+document.getElementById('confirmDeleteMenuItem')?.addEventListener('click', async function() {
+  const btn = this;
+  const spinner = document.getElementById('deleteMenuItemSpinner');
+  const btnText = document.getElementById('deleteMenuItemText');
+  const originalText = btnText.textContent;
+  const originalBg = btn.style.background;
+  btn.disabled = true;
+  spinner.classList.remove('d-none');
+  btnText.textContent = 'Deleting...';
+  btn.style.background = '#9ca3af';
+
+  const itemId = document.getElementById('deleteMenuItemId').value;
+  const reason = document.getElementById('deleteMenuItemReason').value;
+  const result = await apiDelete('/api/kaon-admin/menu/' + itemId + '/delete/', { reason: reason });
+  if (result) {
+    bootstrap.Modal.getInstance(document.getElementById('deleteMenuItemModal')).hide();
+    bootstrap.Modal.getInstance(document.getElementById('storeMenuModal')).hide();
+    await loadMenu();
+    await loadStores();
+    showAlert('Menu item deleted.', 'success');
+  } else {
+    btn.disabled = false;
+    spinner.classList.add('d-none');
+    btnText.textContent = originalText;
+    btn.style.background = originalBg;
+  }
+});
 
 function renderFeedback() {
   const container = document.getElementById('feedbackList');
@@ -871,22 +964,52 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   document.getElementById('confirmDeleteUser')?.addEventListener('click', async function () {
+    const btn = this;
+    const spinner = document.getElementById('confirmDeleteUserSpinner');
+    const btnText = document.getElementById('confirmDeleteUserText');
+    const originalText = btnText.textContent;
+    const originalBg = btn.style.background;
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    btnText.textContent = 'Deleting...';
+    btn.style.background = '#9ca3af';
+
     const userId = document.getElementById('deleteUserId').value;
     const result = await apiDelete('/api/kaon-admin/users/' + userId + '/delete/');
     if (result) {
       bootstrap.Modal.getInstance(document.getElementById('deleteUserModal')).hide();
       await loadUsers();
       await loadStats();
+    } else {
+      btn.disabled = false;
+      spinner.classList.add('d-none');
+      btnText.textContent = originalText;
+      btn.style.background = originalBg;
     }
   });
 
   document.getElementById('confirmDeleteFeedback')?.addEventListener('click', async function () {
+    const btn = this;
+    const spinner = document.getElementById('confirmDeleteFeedbackSpinner');
+    const btnText = document.getElementById('confirmDeleteFeedbackText');
+    const originalText = btnText.textContent;
+    const originalBg = btn.style.background;
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    btnText.textContent = 'Deleting...';
+    btn.style.background = '#9ca3af';
+
     const feedbackId = document.getElementById('deleteFeedbackId').value;
     const result = await apiDelete('/api/kaon-admin/feedback/' + feedbackId + '/delete/');
     if (result) {
       bootstrap.Modal.getInstance(document.getElementById('deleteFeedbackModal')).hide();
       await loadFeedback();
       await loadStats();
+    } else {
+      btn.disabled = false;
+      spinner.classList.add('d-none');
+      btnText.textContent = originalText;
+      btn.style.background = originalBg;
     }
   });
 
