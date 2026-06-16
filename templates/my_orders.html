@@ -43,7 +43,12 @@
         <div class="main-body">
           <div class="section-header">
             <h5><i data-lucide="clipboard-list" style="width:18px;height:18px;color:#ccff00;margin-right:0.35rem;"></i> My Orders</h5>
-            <a href="/menu/" class="section-link">Browse Menu <i data-lucide="plus" style="width:14px;height:14px;"></i></a>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <button id="clearCompletedBtn" style="display:none;align-items:center;gap:0.25rem;padding:0;border:none;background:none;color:#1a1a1a;font-size:0.8rem;font-weight:600;cursor:pointer;transition:color 0.2s;" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#1a1a1a'">
+                <i data-lucide="trash-2" style="width:13px;height:13px;"></i> Clear
+              </button>
+              <a href="/menu/" class="section-link">Browse Menu <i data-lucide="plus" style="width:14px;height:14px;"></i></a>
+            </div>
           </div>
 
           <div id="ordersContent">
@@ -84,6 +89,42 @@
     </div>
   </div>
 </div>
+<div class="modal fade" id="clearOrdersModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="border-radius:16px;border:none;">
+      <div class="modal-body text-center" style="padding:2rem;">
+        <i data-lucide="alert-triangle" style="width:40px;height:40px;color:#ef4444;margin-bottom:1rem;"></i>
+        <h6 style="font-weight:700;margin-bottom:0.25rem;">Clear Orders?</h6>
+        <p class="text-muted small" style="margin-bottom:1.25rem;">Completed and rejected orders will be removed. This cannot be undone.</p>
+        <div style="display:flex;gap:0.5rem;justify-content:center;">
+          <button class="btn btn-sm" style="background:#f3f4f6;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-sm" id="confirmClearOrders" style="background:#ef4444;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;">
+            <span id="clearOrdersSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+            <span id="clearOrdersText">Clear</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="cancelOrderModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="border-radius:16px;border:none;">
+      <div class="modal-body text-center" style="padding:2rem;">
+        <i data-lucide="alert-triangle" style="width:40px;height:40px;color:#ef4444;margin-bottom:1rem;"></i>
+        <h6 style="font-weight:700;margin-bottom:0.25rem;">Cancel Order?</h6>
+        <p class="text-muted small" style="margin-bottom:1.25rem;">This order will be cancelled. This cannot be undone.</p>
+        <div style="display:flex;gap:0.5rem;justify-content:center;">
+          <button class="btn btn-sm" style="background:#f3f4f6;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-sm" id="confirmCancelOrder" style="background:#ef4444;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;">
+            <span id="cancelOrderSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+            <span id="cancelOrderText">Cancel Order</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
@@ -101,6 +142,8 @@ function getItemIcon(category) {
 
 const STATUS_META = {
   pending:        { label: 'Pending Acceptance',   color: '#f59e0b', icon: 'clock' },
+  store_accepted: { label: 'Accepted by Store',   color: '#6b7280', icon: 'check-circle' },
+  store_rejected: { label: 'Rejected by Store',   color: '#dc2626', icon: 'x-circle' },
   received:       { label: 'Order Received',      color: '#6b7280', icon: 'check-circle' },
   preparing:      { label: 'Preparing',            color: '#c2410c', icon: 'cooking-pot' },
   ready_for_pickup: { label: 'Ready for Pick-Up',  color: '#16a34a', icon: 'bell' },
@@ -158,6 +201,17 @@ async function loadOrders() {
             </div>
           `).join('')}
         </div>
+        ${order.status === 'store_rejected' ? `
+          <div style="display:flex;align-items:flex-start;gap:0.5rem;margin:0.3rem 0 0.4rem;padding:0.55rem 0.65rem;background:#fef2f2;border-radius:8px;border:1px solid #fee2e2;">
+            <div style="width:24px;height:24px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i data-lucide="x-circle" style="width:14px;height:14px;color:#dc2626;"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:0.78rem;font-weight:600;color:#dc2626;">Order Rejected</div>
+              ${order.rejection_reason ? `<div style="font-size:0.72rem;color:#6b7280;margin-top:0.15rem;">${order.rejection_reason}</div>` : ''}
+            </div>
+          </div>
+        ` : ''}
         <div style="display:flex;gap:0.4rem;">
           <a href="/order/${order.order_id}/track/" style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.4rem 0.85rem;border:none;border-radius:999px;background:#f3f4f6;color:#374151;font-size:0.78rem;font-weight:600;text-decoration:none;transition:background 0.2s;"
             onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
@@ -169,10 +223,20 @@ async function loadOrders() {
               <i data-lucide="star" style="width:13px;height:13px;"></i> Feedback
             </a>
           ` : ''}
+          ${(order.status === 'pending' || order.status === 'store_accepted') ? `
+            <button class="cancel-order-btn" data-order-id="${order.order_id}" style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.4rem 0.85rem;border:none;border-radius:999px;background:#fef2f2;color:#dc2626;font-size:0.78rem;font-weight:600;cursor:pointer;transition:background 0.2s;"
+              onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fef2f2'">
+              <i data-lucide="x-circle" style="width:13px;height:13px;"></i> Cancel
+            </button>
+          ` : ''}
         </div>
       </div>
     `;
   }).join('');
+
+  const hasClearable = data.some(o => o.status === 'completed' || o.status === 'store_rejected');
+  const clearBtn = document.getElementById('clearCompletedBtn');
+  if (clearBtn) clearBtn.style.display = hasClearable ? 'inline-flex' : 'none';
 
   lucide.createIcons();
 }
@@ -208,8 +272,63 @@ async function handleLogout() {
   window.location.href = '/';
 }
 
+document.getElementById('clearCompletedBtn')?.addEventListener('click', function() {
+  new bootstrap.Modal(document.getElementById('clearOrdersModal')).show();
+});
+
+document.getElementById('confirmClearOrders')?.addEventListener('click', async function() {
+  const btn = this;
+  const spinner = document.getElementById('clearOrdersSpinner');
+  const btnText = document.getElementById('clearOrdersText');
+  const originalBg = btn.style.background;
+  btn.disabled = true;
+  spinner.classList.remove('d-none');
+  btnText.textContent = 'Clearing...';
+  btn.style.background = '#9ca3af';
+
+  await apiDelete('/api/orders/clear-completed/');
+  bootstrap.Modal.getInstance(document.getElementById('clearOrdersModal')).hide();
+  await loadOrders();
+
+  btn.disabled = false;
+  spinner.classList.add('d-none');
+  btnText.textContent = 'Clear';
+  btn.style.background = originalBg;
+});
+
+document.addEventListener('click', function(e) {
+  const cancelBtn = e.target.closest('.cancel-order-btn');
+  if (cancelBtn) {
+    const orderId = cancelBtn.dataset.orderId;
+    document.getElementById('confirmCancelOrder').dataset.orderId = orderId;
+    new bootstrap.Modal(document.getElementById('cancelOrderModal')).show();
+  }
+});
+
+document.getElementById('confirmCancelOrder')?.addEventListener('click', async function() {
+  const btn = this;
+  const spinner = document.getElementById('cancelOrderSpinner');
+  const btnText = document.getElementById('cancelOrderText');
+  const orderId = btn.dataset.orderId;
+  const originalBg = btn.style.background;
+  btn.disabled = true;
+  spinner.classList.remove('d-none');
+  btnText.textContent = 'Cancelling...';
+  btn.style.background = '#9ca3af';
+
+  await apiPost(`/api/orders/${orderId}/cancel/`);
+  bootstrap.Modal.getInstance(document.getElementById('cancelOrderModal')).hide();
+  await loadOrders();
+
+  btn.disabled = false;
+  spinner.classList.add('d-none');
+  btnText.textContent = 'Cancel Order';
+  btn.style.background = originalBg;
+});
+
 loadOrders();
 updateCartBadge();
 lucide.createIcons();
+setInterval(function () { loadOrders(); }, 15000);
 </script>
 {% endblock %}

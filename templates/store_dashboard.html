@@ -138,6 +138,7 @@
           <div id="storeDropdown" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);min-width:200px;z-index:1100;padding:0.35rem;border:1px solid #f0f0f0;">
             <div style="padding:0.5rem 0.75rem 0.3rem;font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">Switch Store</div>
             <div id="storeDropdownList"></div>
+
           </div>
         </div>
         <div class="store-avatar">{{ user.store_name|first }}</div>
@@ -145,7 +146,7 @@
     </div>
 
     <div id="tabOverview" class="dash-tab-content active">
-      <div class="stat-grid" style="margin-bottom:0;">
+      <div class="stat-grid" style="margin-bottom:0;grid-template-columns:1fr 1fr 1.35fr;">
         <div class="stat-box">
           <div class="stat-box-icon" style="background:#fef3c7;color:#f59e0b;"><i data-lucide="clipboard-list"></i></div>
           <div class="stat-box-body">
@@ -172,9 +173,25 @@
       <div class="card" style="margin-top:1rem;">
         <div class="card-header">
           <h5>Incoming Orders</h5>
-          <div style="flex:1;min-width:140px;max-width:240px;margin-left:auto;position:relative;">
-            <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#9ca3af;pointer-events:none;"></i>
-            <input type="text" id="overviewSearch" placeholder="Search orders..." style="width:100%;padding:0.35rem 0.7rem 0.35rem 1.7rem;border-radius:2rem;border:1px solid #e5e7eb;font-size:0.75rem;outline:none;background:#f9fafb;">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-left:auto;flex-wrap:wrap;">
+            <div style="position:relative;">
+              <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#9ca3af;pointer-events:none;"></i>
+              <input type="text" id="overviewSearch" placeholder="Search orders..." style="width:100%;padding:0.35rem 0.7rem 0.35rem 1.7rem;border-radius:2rem;border:1px solid #e5e7eb;font-size:0.75rem;outline:none;background:#f9fafb;">
+            </div>
+            <div style="position:relative;">
+              <button id="overviewStatusFilterBtn" style="display:flex;align-items:center;gap:0.3rem;background:#f9fafb;border:1px solid #e5e7eb;padding:0.35rem 0.75rem;border-radius:2rem;font-size:0.75rem;font-weight:600;color:#1a1a1a;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='#f9fafb'">
+                <span id="overviewStatusFilterText">Active</span>
+                <i data-lucide="chevron-down" style="width:14px;height:14px;color:#6b7280;flex-shrink:0;"></i>
+              </button>
+              <div id="overviewStatusFilterDropdown" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.12);min-width:130px;z-index:1100;padding:0.35rem;border:1px solid #f0f0f0;">
+                <button class="overview-filter-option" data-value="active" style="width:100%;display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border:none;border-radius:8px;background:transparent;color:#1a1a1a;font-size:0.8rem;font-weight:500;cursor:pointer;text-align:left;transition:background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
+                  <span>Active</span>
+                </button>
+                <button class="overview-filter-option" data-value="cancelled" style="width:100%;display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border:none;border-radius:8px;background:transparent;color:#1a1a1a;font-size:0.8rem;font-weight:500;cursor:pointer;text-align:left;transition:background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
+                  <span>Cancelled</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         <div class="card-body" id="overviewOrdersList" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
@@ -302,6 +319,13 @@
             <div class="auth-field">
               <label class="auth-field-label">Stock</label>
               <input type="number" class="auth-input" id="itemStock" required min="0" step="1" style="padding:0.75rem 1rem;">
+              <button type="button" id="showAddStockBtn" style="display:none;background:none;border:none;color:#2563eb;font-size:0.8rem;font-weight:600;padding:0.35rem 0;cursor:pointer;">+ Add Stock</button>
+              <div id="addStockSection" style="display:none;margin-top:0.5rem;">
+                <div style="display:flex;gap:0.5rem;align-items:center;">
+                  <input type="number" class="auth-input" id="addStockAmount" placeholder="Qty to add" min="1" step="1" style="padding:0.6rem 0.85rem;flex:1;">
+                  <button type="button" id="applyAddStockBtn" onclick="applyAddStock()" style="flex-shrink:0;padding:0.6rem 1rem;border:none;border-radius:12px;background:#1a1a1a;color:#fff;font-size:0.85rem;font-weight:700;cursor:pointer;white-space:nowrap;">Add</button>
+                </div>
+              </div>
             </div>
             <div class="auth-field">
               <label class="auth-field-label">Image URL</label>
@@ -337,6 +361,46 @@
   </div>
 </div>
 
+<!-- Reject Order Modal -->
+<div class="modal fade" id="rejectOrderModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.12);">
+      <div class="modal-header" style="border-bottom:1px solid #f0f0f0;padding:1.25rem 1.5rem;">
+        <h5 style="font-weight:800;margin:0;font-size:1.1rem;">
+          <i data-lucide="x-circle" style="width:18px;height:18px;color:#ef4444;margin-right:0.5rem;vertical-align:text-bottom;"></i> Reject Order
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="padding:1.5rem;">
+        <p class="text-muted small" style="margin-bottom:1.25rem;" id="rejectOrderInfo"></p>
+        <input type="hidden" id="rejectOrderId">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div>
+            <label class="small text-muted" style="display:block;margin-bottom:0.5rem;font-weight:600;">Quick reason:</label>
+            <div style="display:flex;flex-direction:column;gap:0.35rem;">
+              <button type="button" class="reject-reason-chip" data-reason="Out of stock" style="text-align:left;padding:0.5rem 0.75rem;border:1px solid #e5e7eb;border-radius:8px;background:#fff;font-size:0.78rem;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='#ef4444'" onmouseout="this.style.borderColor='#e5e7eb'">Out of stock</button>
+              <button type="button" class="reject-reason-chip" data-reason="Item unavailable" style="text-align:left;padding:0.5rem 0.75rem;border:1px solid #e5e7eb;border-radius:8px;background:#fff;font-size:0.78rem;cursor:pointer;transition:all 0.15s;margin-top:0.35rem;" onmouseover="this.style.borderColor='#ef4444'" onmouseout="this.style.borderColor='#e5e7eb'">Item unavailable</button>
+              <button type="button" class="reject-reason-chip" data-reason="Store is closed" style="text-align:left;padding:0.5rem 0.75rem;border:1px solid #e5e7eb;border-radius:8px;background:#fff;font-size:0.78rem;cursor:pointer;transition:all 0.15s;margin-top:0.35rem;" onmouseover="this.style.borderColor='#ef4444'" onmouseout="this.style.borderColor='#e5e7eb'">Store is closed</button>
+              <button type="button" class="reject-reason-chip" data-reason="Other" style="text-align:left;padding:0.5rem 0.75rem;border:1px solid #e5e7eb;border-radius:8px;background:#fff;font-size:0.78rem;cursor:pointer;transition:all 0.15s;margin-top:0.35rem;" onmouseover="this.style.borderColor='#ef4444'" onmouseout="this.style.borderColor='#e5e7eb'">Other</button>
+            </div>
+          </div>
+          <div>
+            <label class="small text-muted" style="display:block;margin-bottom:0.5rem;font-weight:600;">Custom reason:</label>
+            <textarea id="rejectOrderReason" rows="5" style="width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:0.5rem;font-size:0.8rem;resize:none;outline:none;" placeholder="Type a reason..." onfocus="this.style.borderColor='#f97316'" onblur="this.style.borderColor='#e5e7eb'"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid #f0f0f0;padding:1rem 1.5rem;">
+        <button class="btn btn-sm" style="background:#f3f4f6;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-sm" style="background:#ef4444;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" id="confirmRejectOrder">
+          <span id="rejectOrderSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+          <span id="rejectOrderText">Reject</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 {% block scripts %}
 <script>
@@ -349,8 +413,9 @@ let menuCategoryFilter = '';
 let menuSearchQuery = '';
 let overviewSearchQuery = '';
 let ordersSearchQuery = '';
+let overviewStatusFilter = 'active';
 let notifData = null;
-let notifInterval = null;
+let ws = null;
 let stores = [];
 let activeStoreId = null;
 
@@ -365,7 +430,7 @@ const pageMeta = {
 function renderOrders() {
   const container = document.getElementById('ordersList');
   const q = ordersSearchQuery.toLowerCase();
-  let all = currentOrders.filter(o => o.status !== 'cancelled');
+  let all = currentOrders.filter(o => o.status === 'completed');
   if (q) {
     all = all.filter(o =>
       o.order_number.toLowerCase().includes(q) ||
@@ -408,9 +473,10 @@ function renderOrders() {
         '</div>' +
         '<div style="flex-shrink:0;display:flex;flex-direction:column;gap:0.35rem;">' +
           (order.status === 'pending'
-            ? '<button class="btn btn-sm" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'store_accepted\')"><i data-lucide="check" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Accept</button>'
+            ? '<button class="btn btn-sm" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'store_accepted\')"><i data-lucide="check" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Accept</button>' +
+              '<button class="btn btn-sm" style="background:#ef4444;color:#fff;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;margin-top:4px;" onclick="openRejectModal(\'' + order.order_id + '\',\'' + order.order_number.replace(/'/g, "\\'") + '\',\'' + escapeHtml(order.user?.full_name || 'Unknown') + '\')"><i data-lucide="x" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Reject</button>'
             : '') +
-(order.status === 'store_accepted'
+          (order.status === 'store_accepted'
             ? '<button class="btn btn-sm" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.72rem;font-weight:700;padding:0.3rem 0.9rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'preparing\')"><i data-lucide="check" style="width:13px;height:13px;vertical-align:text-bottom;"></i> Prepare</button>'
             : '') +
           (order.status === 'preparing'
@@ -432,7 +498,13 @@ function renderOrders() {
 function renderOverview() {
   const container = document.getElementById('overviewOrdersList');
   const q = overviewSearchQuery.toLowerCase();
-  let incoming = currentOrders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
+  const filter = overviewStatusFilter;
+  let incoming;
+  if (filter === 'cancelled') {
+    incoming = currentOrders.filter(o => o.status === 'cancelled' || o.status === 'store_rejected');
+  } else {
+    incoming = currentOrders.filter(o => o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'store_rejected');
+  }
   if (q) {
     incoming = incoming.filter(o =>
       o.order_number.toLowerCase().includes(q) ||
@@ -441,7 +513,10 @@ function renderOverview() {
     );
   }
   if (!incoming.length) {
-    container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="inbox" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">' + (q ? 'No orders match your search.' : 'No incoming orders.') + '</p></div>';
+    const msg = filter === 'cancelled'
+      ? (q ? 'No cancelled orders match your search.' : 'No cancelled orders.')
+      : (q ? 'No orders match your search.' : 'No incoming orders.');
+    container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="inbox" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">' + msg + '</p></div>';
     document.getElementById('statRevenue').textContent = '₱' +
       currentOrders
         .filter(o => o.status === 'completed')
@@ -457,9 +532,12 @@ function renderOverview() {
   const recent = incoming;
   const statusMeta = {
     pending: { color: '#f59e0b', bg: '#fef3c7', label: 'Pending' },
+    store_accepted: { color: '#6b7280', bg: '#f3f4f6', label: 'Accepted' },
+    store_rejected: { color: '#dc2626', bg: '#fef2f2', label: 'Rejected' },
     received: { color: '#6b7280', bg: '#f3f4f6', label: 'Received' },
     preparing: { color: '#3b82f6', bg: '#eff6ff', label: 'Preparing' },
     ready_for_pickup: { color: '#10b981', bg: '#ecfdf5', label: 'Ready for Pickup' },
+    cancelled: { color: '#dc2626', bg: '#fef2f2', label: 'Cancelled' },
   };
   container.innerHTML = recent.map(order => {
     const items = order.items.map(i => i.item_name + ' x' + i.quantity).join(', ');
@@ -479,7 +557,8 @@ function renderOverview() {
       '<div style="flex-shrink:0;text-align:right;">' +
         '<strong style="font-size:0.9rem;display:block;">₱' + parseFloat(order.total_amount).toFixed(2) + '</strong>' +
         (order.status === 'pending'
-          ? '<button class="btn btn-sm mt-1" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'store_accepted\')"><i data-lucide="check" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Accept</button>'
+          ? '<button class="btn btn-sm mt-1" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'store_accepted\')"><i data-lucide="check" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Accept</button>' +
+            '<button class="btn btn-sm mt-1" style="background:#ef4444;color:#fff;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;margin-left:4px;" onclick="openRejectModal(\'' + order.order_id + '\',\'' + order.order_number.replace(/'/g, "\\'") + '\',\'' + escapeHtml(order.user?.full_name || 'Unknown') + '\')"><i data-lucide="x" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Reject</button>'
           : '') +
         (order.status === 'store_accepted'
           ? '<button class="btn btn-sm mt-1" style="background:#ccff00;color:#1a1a1a;border-radius:2rem;font-size:0.68rem;font-weight:700;padding:0.2rem 0.75rem;border:none;cursor:pointer;" onclick="updateOrderStatus(\'' + order.order_id + '\',\'preparing\')"><i data-lucide="check" style="width:12px;height:12px;vertical-align:text-bottom;"></i> Prepare</button>'
@@ -744,15 +823,29 @@ function renderStoreSelector() {
   nameEl.textContent = active ? active.name : 'Store';
   list.innerHTML = stores.map(s => {
     const isActive = s.store_id === activeStoreId;
-    return '<button style="display:flex;align-items:center;gap:0.5rem;width:100%;padding:0.5rem 0.75rem;border:none;border-radius:8px;background:' + (isActive ? '#f3f4f6' : 'transparent') + ';color:#1a1a1a;font-size:0.8rem;font-weight:' + (isActive ? '700' : '500') + ';cursor:pointer;text-align:left;transition:background 0.15s;" ' +
+    return '<div style="width:100%;">' +
+      '<button style="width:100%;display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;border:none;border-radius:8px;background:' + (isActive ? '#f3f4f6' : 'transparent') + ';color:#1a1a1a;font-size:0.8rem;font-weight:' + (isActive ? '700' : '500') + ';cursor:pointer;text-align:left;transition:background 0.15s;" ' +
       'onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'' + (isActive ? '#f3f4f6' : 'transparent') + '\'" ' +
       'onclick="switchStore(' + s.store_id + ')" data-store-id="' + s.store_id + '">' +
       '<i data-lucide="store" style="width:14px;height:14px;color:#f97316;flex-shrink:0;"></i>' +
       '<span style="flex:1;">' + s.name + '</span>' +
       (isActive ? '<i data-lucide="check" style="width:14px;height:14px;color:#16a34a;"></i>' : '') +
-    '</button>';
-  }).join('');
+    '</button></div>';
+  }).join('') +
+  '<div style="border-top:1px solid #e5e7eb;margin:0.25rem 0;"></div>' +
+  '<a href="/store/add/" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;color:#f97316;font-size:0.8rem;font-weight:500;text-decoration:none;border-radius:8px;">' +
+    '<i data-lucide="plus-circle" style="width:14px;height:14px;"></i>' +
+    '<span>Add Store</span>' +
+  '</a>';
   lucide.createIcons();
+}
+
+async function deleteStore(storeId, storeName) {
+  if (!confirm('Remove "' + storeName + '"? This cannot be undone.')) return;
+  const result = await apiDelete('/api/store/manage/' + storeId + '/');
+  if (result) {
+    await loadStores();
+  }
 }
 
 async function switchStore(storeId) {
@@ -787,6 +880,47 @@ async function updateOrderStatus(orderId, status) {
   if (result) await loadOrders();
 }
 
+function openRejectModal(orderId, orderNumber, customerName) {
+  document.getElementById('rejectOrderId').value = orderId;
+  document.getElementById('rejectOrderInfo').textContent = 'Reject order #' + orderNumber + ' from ' + customerName + '?';
+  document.getElementById('rejectOrderReason').value = '';
+  document.querySelectorAll('.reject-reason-chip').forEach(function(c) { c.style.background = '#fff'; });
+  new bootstrap.Modal(document.getElementById('rejectOrderModal')).show();
+}
+
+document.querySelectorAll('.reject-reason-chip').forEach(function(chip) {
+  chip.addEventListener('click', function() {
+    document.querySelectorAll('.reject-reason-chip').forEach(function(c) { c.style.background = '#fff'; });
+    this.style.background = '#fef2f2';
+    document.getElementById('rejectOrderReason').value = this.dataset.reason;
+  });
+});
+
+document.getElementById('confirmRejectOrder')?.addEventListener('click', async function() {
+  const btn = this;
+  const spinner = document.getElementById('rejectOrderSpinner');
+  const btnText = document.getElementById('rejectOrderText');
+  const originalText = btnText.textContent;
+  const originalBg = btn.style.background;
+  btn.disabled = true;
+  spinner.classList.remove('d-none');
+  btnText.textContent = 'Rejecting...';
+  btn.style.background = '#9ca3af';
+
+  const orderId = document.getElementById('rejectOrderId').value;
+  const reason = document.getElementById('rejectOrderReason').value;
+  const result = await apiPost('/api/store/orders/' + orderId + '/status/', { status: 'store_rejected', reason: reason || '' });
+  if (result) {
+    bootstrap.Modal.getInstance(document.getElementById('rejectOrderModal')).hide();
+    await loadOrders();
+  } else {
+    btn.disabled = false;
+    spinner.classList.add('d-none');
+    btnText.textContent = originalText;
+    btn.style.background = originalBg;
+  }
+});
+
 async function saveMenuItem(formData) {
   const editId = document.getElementById('editItemId').value;
   const body = {
@@ -817,6 +951,9 @@ function editMenuItem(itemId) {
   document.getElementById('itemCategory').value = item.category;
   document.getElementById('itemImage').value = item.image_url;
   document.getElementById('itemStock').value = item.stock || 0;
+  document.getElementById('showAddStockBtn').style.display = 'block';
+  document.getElementById('addStockSection').style.display = 'none';
+  document.getElementById('addStockAmount').value = '';
   document.getElementById('menuSubmitBtn').textContent = 'Update Item';
   new bootstrap.Modal(document.getElementById('menuModal')).show();
 }
@@ -826,12 +963,64 @@ function confirmDelete(itemId) {
   new bootstrap.Modal(document.getElementById('deleteModal')).show();
 }
 
+function connectWebSocket() {
+  const token = getToken();
+  if (!token) { setTimeout(connectWebSocket, 3000); return; }
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = protocol + '//' + window.location.host + '/ws/orders/?token=' + encodeURIComponent(token);
+  try {
+    ws = new WebSocket(wsUrl);
+    ws.onopen = function () {
+      console.log('WebSocket connected');
+    };
+    ws.onmessage = function (event) {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'new_order') {
+          loadNotifications();
+          loadOrders();
+          loadMenu();
+        } else if (data.type === 'new_feedback') {
+          loadFeedback();
+          loadNotifications();
+        } else if (data.type === 'store_approved') {
+          loadNotifications();
+          loadStores();
+          showAlert(data.message, 'success');
+        } else if (data.status) {
+          loadOrders();
+          loadNotifications();
+        } else {
+          loadNotifications();
+          loadOrders();
+          loadMenu();
+        }
+      } catch (e) {
+        loadNotifications();
+        loadOrders();
+        loadMenu();
+      }
+    };
+    ws.onclose = function () {
+      console.log('WebSocket closed, reconnecting...');
+      setTimeout(connectWebSocket, 3000);
+    };
+    ws.onerror = function (e) {
+      console.error('WebSocket error', e);
+    };
+  } catch (err) {
+    console.error('WebSocket creation failed', err);
+    setTimeout(connectWebSocket, 5000);
+  }
+}
+
 function loadAllDashboardData() {
   loadOrders();
   loadMenu();
   loadFeedback();
   loadNotifications();
-  notifInterval = setInterval(loadNotifications, 15000);
+  connectWebSocket();
+  setInterval(function () { loadNotifications(); loadOrders(); loadMenu(); loadFeedback(); }, 15000);
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -886,6 +1075,26 @@ document.addEventListener('DOMContentLoaded', function () {
     renderOverview();
   });
 
+  document.getElementById('overviewStatusFilterBtn')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const dd = document.getElementById('overviewStatusFilterDropdown');
+    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+  });
+  document.addEventListener('click', function() {
+    const dd = document.getElementById('overviewStatusFilterDropdown');
+    if (dd) dd.style.display = 'none';
+  });
+  document.getElementById('overviewStatusFilterDropdown')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const opt = e.target.closest('.overview-filter-option');
+    if (opt) {
+      overviewStatusFilter = opt.dataset.value;
+      document.getElementById('overviewStatusFilterText').textContent = opt.textContent.trim();
+      dd.style.display = 'none';
+      renderOverview();
+    }
+  });
+
   document.getElementById('ordersSearch')?.addEventListener('input', function () {
     ordersSearchQuery = this.value;
     renderOrders();
@@ -920,12 +1129,33 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.disabled = false;
   });
 
+  document.getElementById('showAddStockBtn').addEventListener('click', function () {
+    document.getElementById('addStockSection').style.display = 'block';
+    document.getElementById('showAddStockBtn').style.display = 'none';
+    document.getElementById('addStockAmount').focus();
+  });
+
+  window.applyAddStock = function () {
+    const el = document.getElementById('itemStock');
+    const currentStock = parseInt(el.value) || 0;
+    const addAmount = parseInt(document.getElementById('addStockAmount').value) || 0;
+    if (addAmount > 0) {
+      el.value = currentStock + addAmount;
+      document.getElementById('addStockAmount').value = '';
+      document.getElementById('addStockSection').style.display = 'none';
+      document.getElementById('showAddStockBtn').style.display = 'block';
+    }
+  };
+
   document.getElementById('menuModal').addEventListener('hidden.bs.modal', function () {
     document.getElementById('menuForm').reset();
     document.getElementById('editItemId').value = '';
     document.getElementById('menuModalTitle').textContent = 'Add Menu Item';
     document.getElementById('menuSubmitBtn').textContent = 'Save Item';
     document.getElementById('itemStock').value = '';
+    document.getElementById('showAddStockBtn').style.display = 'none';
+    document.getElementById('addStockSection').style.display = 'none';
+    document.getElementById('addStockAmount').value = '';
   });
 
   document.getElementById('confirmDelete').addEventListener('click', async function () {

@@ -1,18 +1,34 @@
 import json
+from urllib.parse import parse_qs
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from rest_framework_simplejwt.tokens import AccessToken
+from .models import User
 
 
 class OrderConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        query_string = self.scope.get('query_string', b'').decode()
+        params = parse_qs(query_string)
+        token = params.get('token', [None])[0]
+        if token:
+            try:
+                access = AccessToken(token)
+                user = User.objects.get(user_id=access['user_id'])
+                self.scope['user'] = user
+            except Exception:
+                pass
         self.user = self.scope.get('user')
         if self.user and self.user.is_authenticated:
             self.group_name = f"user_{self.user.user_id}"
             await self.channel_layer.group_add(self.group_name, self.channel_name)
+            await self.channel_layer.group_add('menu_updates', self.channel_name)
+            if self.user.user_type == 'admin':
+                await self.channel_layer.group_add('admin', self.channel_name)
             await self.accept()
         else:
             await self.close()
@@ -20,6 +36,7 @@ class OrderConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         if hasattr(self, 'group_name'):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
+            await self.channel_layer.group_discard('menu_updates', self.channel_name)
 
     async def receive(self, text_data):
         pass
@@ -27,22 +44,101 @@ class OrderConsumer(AsyncWebsocketConsumer):
     async def order_status_update(self, event):
         await self.send(text_data=json.dumps(event['data']))
 
+    async def new_registration(self, event):
+        await self.send(text_data=json.dumps(event['data']))
 
-def notify_order_status_change(order):
+    async def menu_updated(self, event):
+        await self.send(text_data=json.dumps(event['data']))
+
+    async def store_approval_request(self, event):
+        await self.send(text_data=json.dumps(event['data']))
+
+    async def store_approved(self, event):
+        await self.send(text_data=json.dumps(event['data']))
+
+
+def _send_to_group(group_name, data):
     channel_layer = get_channel_layer()
-    user_id_str = str(order.user.user_id)
     async_to_sync(channel_layer.group_send)(
-        f"user_{user_id_str}",
+        group_name,
+        {'type': 'order_status_update', 'data': data}
+    )
+
+
+def notify_admin_new_registration(user_data):
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        'admin',
         {
-            'type': 'order_status_update',
+            'type': 'new_registration',
             'data': {
-                'order_id': str(order.order_id),
-                'order_number': order.order_number,
-                'status': order.status,
-                'message': f"Order {order.order_number} is now: {order.get_status_display()}",
+                'type': 'new_registration',
+                'message': f'New {user_data.get("user_type", "user")} registration: {user_data.get("full_name", "Unknown")}',
             }
         }
     )
+
+
+def notify_store_approved(store):
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f"user_{store.owner.user_id}",
+        {
+            'type': 'store_approved',
+            'data': {
+                'type': 'store_approved',
+                'store_id': store.store_id,
+                'store_name': store.name,
+                'message': f'Your store "{store.name}" has been approved!',
+            }
+        }
+    )
+
+
+def notify_admin_new_store(store_data):
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        'admin',
+        {
+            'type': 'store_approval_request',
+            'data': {
+                'type': 'store_approval_request',
+                'message': f'New store needs approval: {store_data.get("store_name", "Unknown")} by {store_data.get("owner_name", "Unknown")}',
+            }
+        }
+    )
+
+
+def notify_store_new_order(order):
+    store_owner_ids = set(
+        order.items.filter(store_owner__isnull=False)
+        .values_list('store_owner__user_id', flat=True)
+    )
+    data = {
+        'type': 'new_order',
+        'order_id': str(order.order_id),
+        'order_number': order.order_number,
+        'message': f'New order #{order.order_number} received!',
+    }
+    for uid in store_owner_ids:
+        _send_to_group(f"user_{uid}", data)
+
+
+def notify_order_status_change(order):
+    data = {
+        'order_id': str(order.order_id),
+        'order_number': order.order_number,
+        'status': order.status,
+        'message': f"Order {order.order_number} is now: {order.get_status_display()}",
+    }
+    _send_to_group(f"user_{order.user.user_id}", data)
+
+    store_owner_ids = set(
+        order.items.filter(store_owner__isnull=False)
+        .values_list('store_owner__user_id', flat=True)
+    )
+    for uid in store_owner_ids:
+        _send_to_group(f"user_{uid}", data)
 
     if order.status == 'ready_for_pickup' and order.user.user_type in ('student', 'faculty'):
         stores = order.items.filter(store__isnull=False).values_list('store__name', flat=True).distinct()
@@ -87,3 +183,33 @@ def notify_order_status_change(order):
             msg.send(fail_silently=False)
         except Exception:
             pass
+
+
+def notify_store_new_feedback(feedback):
+    store_owner_ids = set(
+        feedback.order.items.filter(store_owner__isnull=False)
+        .values_list('store_owner__user_id', flat=True)
+    )
+    data = {
+        'type': 'new_feedback',
+        'feedback_id': str(feedback.feedback_id),
+        'rating': feedback.rating,
+        'satisfaction_level': feedback.satisfaction_level,
+        'message': f'New feedback received — {feedback.rating}/5',
+    }
+    for uid in store_owner_ids:
+        _send_to_group(f"user_{uid}", data)
+
+
+def notify_menu_updated():
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        'menu_updates',
+        {
+            'type': 'menu_updated',
+            'data': {
+                'type': 'menu_updated',
+                'message': 'Menu availability updated',
+            }
+        }
+    )

@@ -433,8 +433,46 @@ document.querySelector('.add-to-cart-modal-btn')?.addEventListener('click', func
   if (itemId) addToCart(itemId, this);
 });
 
+let menuWs = null;
+
+function connectMenuWebSocket() {
+  const token = getToken();
+  if (!token) return;
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = protocol + '//' + window.location.host + '/ws/orders/?token=' + encodeURIComponent(token);
+
+  try {
+    menuWs = new WebSocket(wsUrl);
+
+    menuWs.onmessage = function (event) {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'menu_updated') {
+          loadMenu();
+        }
+      } catch (e) {}
+    };
+
+    menuWs.onclose = function () {
+      setTimeout(connectMenuWebSocket, 3000);
+    };
+
+    menuWs.onerror = function () {
+      menuWs.close();
+    };
+  } catch (e) {
+    setTimeout(connectMenuWebSocket, 5000);
+  }
+}
+
 loadMenu();
 loadCart();
 lucide.createIcons();
+
+if (isAuthenticated()) {
+  connectMenuWebSocket();
+  setInterval(loadMenu, 15000);
+}
 </script>
 {% endblock %}

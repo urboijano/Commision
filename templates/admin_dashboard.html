@@ -144,13 +144,7 @@
             <div><span style="font-size:0.65rem;color:#6b7280;">Stores</span><br><strong style="font-size:0.85rem;" id="statStores">0</strong></div>
           </div>
         </div>
-        <div style="background:#fff;border-radius:12px;padding:1rem 1.25rem;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
-            <span style="font-size:0.75rem;color:#6b7280;font-weight:600;">Revenue</span>
-            <div style="width:28px;height:28px;border-radius:8px;background:#ef4444;display:flex;align-items:center;justify-content:center;"><i data-lucide="trending-up" style="width:14px;height:14px;color:#fff;"></i></div>
-          </div>
-          <strong style="font-size:1.5rem;font-weight:800;" id="statRevenue">₱0.00</strong>
-        </div>
+
         <div style="background:#fff;border-radius:12px;padding:1rem 1.25rem;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
             <span style="font-size:0.75rem;color:#6b7280;font-weight:600;">Feedback</span>
@@ -167,6 +161,16 @@
           </div>
           <div class="card-body" style="padding:0;overflow-x:auto;">
             <div id="pendingList"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin:0.75rem 0 0;">
+          <div class="card-header">
+            <h5>Pending New Store Approvals</h5>
+            <span id="pendingStoreCount" class="badge" style="background:#f97316;color:#fff;">0</span>
+          </div>
+          <div class="card-body" style="padding:0;overflow-x:auto;">
+            <div id="pendingStoreList"></div>
           </div>
         </div>
 
@@ -227,7 +231,7 @@
         <div class="card-body" style="padding:0;overflow-x:auto;">
           <table class="admin-table">
             <thead>
-              <tr><th>Store</th><th>Owner</th><th>Items</th><th>Status</th><th>Joined</th></tr>
+              <tr><th>Store</th><th>Owner</th><th>Items</th><th>Approval</th><th>Status</th><th>Joined</th><th></th></tr>
             </thead>
             <tbody id="adminStoreList"></tbody>
           </table>
@@ -243,26 +247,6 @@
         </div>
         <div class="card-body">
           <div class="feedback-list" id="feedbackList"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal fade" id="deleteUserModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-sm">
-    <div class="modal-content" style="border-radius:16px;border:none;">
-      <div class="modal-body text-center" style="padding:2rem;">
-        <i data-lucide="alert-triangle" style="width:40px;height:40px;color:#ef4444;margin-bottom:1rem;"></i>
-        <h6 style="font-weight:700;">Delete this user?</h6>
-        <p class="text-muted small">This action cannot be undone.</p>
-        <input type="hidden" id="deleteUserId">
-        <div style="display:flex;gap:0.5rem;justify-content:center;">
-          <button class="btn btn-sm" style="background:#f3f4f6;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-sm" style="background:#ef4444;color:#fff;border-radius:10px;font-weight:600;padding:0.5rem 1.5rem;" id="confirmDeleteUser">
-            <span id="confirmDeleteUserSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
-            <span id="confirmDeleteUserText">Delete</span>
-          </button>
         </div>
       </div>
     </div>
@@ -450,12 +434,13 @@ let userSearchQuery = '';
 
 function renderStats() {
   document.getElementById('statTotalUsers').textContent = adminStats.total_users || 0;
-  document.getElementById('statRevenue').textContent = '₱' + parseFloat(adminStats.total_revenue || 0).toFixed(2);
   document.getElementById('statFeedback').textContent = adminStats.total_feedback || 0;
   document.getElementById('statStudents').textContent = adminStats.total_students || 0;
   document.getElementById('statFaculty').textContent = adminStats.total_faculty || 0;
   document.getElementById('statStores').textContent = adminStats.total_stores || 0;
   document.getElementById('pendingCount').textContent = adminStats.pending_approval || 0;
+  const pendingStoreEl = document.getElementById('pendingStoreCount');
+  if (pendingStoreEl) pendingStoreEl.textContent = adminStats.pending_store_approvals || 0;
 }
 
 function renderPending() {
@@ -496,6 +481,46 @@ function renderPending() {
         }).join('') +
       '</tbody>' +
     '</table>';
+}
+
+
+
+function renderPendingStores() {
+  const container = document.getElementById('pendingStoreList');
+  const pending = adminStores.filter(s => !s.is_approved && s.is_active);
+  document.getElementById('pendingStoreCount').textContent = pending.length || 0;
+  if (!pending.length) {
+    container.innerHTML = '<div class="text-center py-4"><p class="text-muted small mb-0" style="font-size:0.85rem;">No pending store approvals.</p></div>';
+    return;
+  }
+  container.innerHTML =
+    '<table class="admin-table" style="font-size:0.8rem;">' +
+      '<thead>' +
+        '<tr><th style="padding:0.5rem 0.65rem;">Store</th><th style="padding:0.5rem 0.65rem;">Owner</th><th style="padding:0.5rem 0.65rem;">DTI Permit</th><th style="padding:0.5rem 0.65rem;text-align:right;">Actions</th></tr>' +
+      '</thead>' +
+      '<tbody>' +
+        pending.map(s => {
+          const docIcon = s.dti_permit
+            ? '<button class="icon-btn" style="width:28px;height:28px;color:#3b82f6;font-size:0.75rem;" onclick="openDtiModal(\'' + s.dti_permit + '\')" title="View DTI Permit"><i data-lucide="file-image" style="width:14px;height:14px;"></i></button>'
+            : '<span style="color:#ef4444;font-size:0.7rem;" title="No DTI Permit">&mdash;</span>';
+          return '<tr>' +
+            '<td style="padding:0.55rem 0.65rem;">' +
+              '<div style="display:flex;align-items:center;gap:0.55rem;">' +
+                '<div style="width:32px;height:32px;border-radius:8px;background:#f97316;display:flex;align-items:center;justify-content:center;"><i data-lucide="store" style="width:16px;height:16px;color:#fff;"></i></div>' +
+                '<div><strong style="font-size:0.82rem;">' + escapeHtml(s.store_name) + '</strong></div>' +
+              '</div>' +
+            '</td>' +
+            '<td style="padding:0.55rem 0.65rem;font-size:0.75rem;color:#4b5563;"><strong>' + escapeHtml(s.full_name) + '</strong></td>' +
+            '<td style="padding:0.55rem 0.65rem;text-align:center;">' + docIcon + '</td>' +
+            '<td style="padding:0.55rem 0.65rem;text-align:right;white-space:nowrap;">' +
+              '<button class="icon-btn" style="width:30px;height:30px;color:#ef4444;display:inline-flex;" onclick="rejectStore(' + s.store_id + ',\'' + escapeHtml(s.store_name) + '\')" title="Reject"><i data-lucide="x-circle" style="width:16px;height:16px;"></i></button>' +
+              '<button class="icon-btn" style="width:30px;height:30px;color:#16a34a;display:inline-flex;margin-left:4px;" onclick="approveStore(' + s.store_id + ')" title="Approve"><i data-lucide="check-circle" style="width:16px;height:16px;"></i></button>' +
+            '</td>' +
+          '</tr>';
+        }).join('') +
+      '</tbody>' +
+    '</table>';
+  lucide.createIcons();
 }
 
 
@@ -581,7 +606,7 @@ function renderUsers() {
   const tbody = document.getElementById('usersList');
   const q = userSearchQuery.toLowerCase();
   const filtered = adminUsers.filter(u => {
-    if (u.user_type === 'admin') return false;
+    if (u.user_type === 'admin' || !u.is_active) return false;
     if (userTypeFilter !== 'all' && u.user_type !== userTypeFilter) return false;
     if (!q) return true;
     return (u.full_name && u.full_name.toLowerCase().includes(q)) ||
@@ -607,7 +632,6 @@ function renderUsers() {
       '<td style="white-space:nowrap;">' +
         (u.user_type !== 'admin' ? '<button class="icon-btn" style="width:30px;height:30px;color:#3b82f6;font-size:0.85rem;display:inline-flex;" onclick="viewUser(\'' + u.user_id + '\')" title="View"><i data-lucide="eye" style="width:15px;height:15px;"></i></button>' : '') +
         (u.user_type !== 'admin' ? '<button class="icon-btn" style="width:30px;height:30px;color:#f59e0b;font-size:0.85rem;display:inline-flex;margin-left:4px;" onclick="editUser(\'' + u.user_id + '\')" title="Edit"><i data-lucide="pencil" style="width:15px;height:15px;"></i></button>' : '') +
-        (u.user_type !== 'admin' ? '<button class="icon-btn" style="width:30px;height:30px;color:#ef4444;font-size:0.85rem;display:inline-flex;margin-left:4px;" onclick="confirmDeleteUser(\'' + u.user_id + '\')" title="Delete"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>' : '') +
       '</td>' +
       '</tr>';
   }).join('');
@@ -618,32 +642,53 @@ function renderUsers() {
 function renderStores() {
   const tbody = document.getElementById('adminStoreList');
   if (!adminStores.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-muted small text-center py-4">No stores registered yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-muted small text-center py-4">No stores registered yet.</td></tr>';
     document.getElementById('adminStoreCount').textContent = '0';
     return;
   }
-  tbody.innerHTML = adminStores.map(s => {
+  tbody.innerHTML = adminStores.filter(s => s.is_approved).map(s => {
     const statusColor = s.is_deactivated ? '#6b7280' : s.is_open ? '#16a34a' : '#f59e0b';
     const statusLabel = s.is_deactivated ? 'Deactivated' : s.is_open ? 'Open' : 'Closed';
-    const activeColor = s.is_active ? '#16a34a' : '#ef4444';
-    const activeLabel = s.is_active ? 'Approved' : 'Pending';
-    return '<tr style="cursor:pointer;" onclick="openStoreMenu(\'' + escapeHtml(s.store_name) + '\')">' +
+    const approvalColor = s.is_approved ? '#16a34a' : '#f59e0b';
+    const approvalLabel = s.is_approved ? 'Approved' : 'Pending';
+    const approveBtn = s.is_approved ? '' :
+      '<button class="icon-btn" style="width:30px;height:30px;color:#16a34a;display:inline-flex;" onclick="event.stopPropagation();approveStore(' + s.store_id + ')" title="Approve Store"><i data-lucide="check-circle" style="width:16px;height:16px;"></i></button>';
+    return '<tr style="cursor:pointer;" onclick="openStoreMenu(' + s.store_id + ',\'' + escapeHtml(s.store_name) + '\')">' +
       '<td><div style="display:flex;align-items:center;gap:0.5rem;">' +
         '<div style="width:32px;height:32px;border-radius:8px;background:#f97316;display:flex;align-items:center;justify-content:center;"><i data-lucide="store" style="width:16px;height:16px;color:#fff;"></i></div>' +
         '<div><strong style="font-size:0.85rem;">' + escapeHtml(s.store_name) + '</strong></div>' +
       '</div></td>' +
       '<td><div><strong style="font-size:0.82rem;">' + escapeHtml(s.full_name) + '</strong><span class="text-muted small d-block" style="font-size:0.7rem;">' + escapeHtml(s.email) + '</span></div></td>' +
       '<td class="text-muted">' + (s.menu_count || 0) + '</td>' +
-      '<td><span class="badge-status" style="background:' + statusColor + ';color:#fff;">' + statusLabel + '</span> <span class="badge-status" style="background:' + activeColor + ';color:#fff;">' + activeLabel + '</span></td>' +
+      '<td><span class="badge-status" style="background:' + approvalColor + ';color:#fff;">' + approvalLabel + '</span></td>' +
+      '<td><span class="badge-status" style="background:' + statusColor + ';color:#fff;">' + statusLabel + '</span></td>' +
       '<td class="text-muted" style="font-size:0.75rem;">' + (s.date_joined ? new Date(s.date_joined).toLocaleDateString() : '-') + '</td>' +
+      '<td style="text-align:right;white-space:nowrap;">' + approveBtn + '</td>' +
     '</tr>';
   }).join('');
-  document.getElementById('adminStoreCount').textContent = adminStores.length;
+  document.getElementById('adminStoreCount').textContent = adminStores.filter(s => s.is_approved).length;
   lucide.createIcons();
 }
 
-function openStoreMenu(storeName) {
-  const available = adminMenu.filter(item => item.store_name === storeName && item.is_available);
+async function approveStore(storeId) {
+  const result = await apiPost('/api/kaon-admin/stores/' + storeId + '/approve/', {});
+  if (result) {
+    await loadStores();
+  }
+}
+
+async function rejectStore(storeId, storeName) {
+  const reason = prompt('Rejection reason for "' + storeName + '":');
+  if (reason === null) return;
+  if (!confirm('Reject store "' + storeName + '"? This will remove the store.')) return;
+  const result = await apiPost('/api/kaon-admin/stores/' + storeId + '/reject/', { reason: reason });
+  if (result) {
+    await loadStores();
+  }
+}
+
+function openStoreMenu(storeId, storeName) {
+  const available = adminMenu.filter(item => (item.store_id === storeId || item.store_name === storeName) && item.is_available);
   document.getElementById('storeMenuModalTitle').textContent = storeName + ' - Available Items';
   const body = document.getElementById('storeMenuModalBody');
   if (!available.length) {
@@ -812,11 +857,6 @@ async function handleLogout() {
   window.location.href = '/';
 }
 
-function confirmDeleteUser(userId) {
-  document.getElementById('deleteUserId').value = userId;
-  new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
-}
-
 function viewUser(userId) {
   const u = adminUsers.find(x => x.user_id === userId);
   if (!u) return;
@@ -905,6 +945,7 @@ async function loadStores() {
   const data = await apiGet('/api/kaon-admin/stores/');
   if (data) adminStores = data;
   renderStores();
+  renderPendingStores();
 }
 
 async function loadMenu() {
@@ -925,12 +966,51 @@ const pageTitles = {
   feedback: ['Feedback', 'Review customer feedback'],
 };
 
+let ws = null;
+
+function connectWebSocket() {
+  const token = getToken();
+  if (!token) { setTimeout(connectWebSocket, 3000); return; }
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = protocol + '//' + window.location.host + '/ws/orders/?token=' + encodeURIComponent(token);
+  try {
+    ws = new WebSocket(wsUrl);
+    ws.onopen = function () {
+      console.log('WebSocket connected');
+    };
+    ws.onmessage = function (event) {
+      const data = JSON.parse(event.data);
+    if (data.type === 'new_registration') {
+        loadUsers();
+        loadStats();
+    }
+    if (data.type === 'store_approval_request') {
+        loadStores();
+        loadStats();
+        showAlert(data.message, 'info');
+    }
+    };
+    ws.onclose = function () {
+      console.log('WebSocket closed, reconnecting...');
+      setTimeout(connectWebSocket, 3000);
+    };
+    ws.onerror = function (e) {
+      console.error('WebSocket error', e);
+    };
+  } catch (err) {
+    console.error('WebSocket creation failed', err);
+    setTimeout(connectWebSocket, 5000);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
   loadStats();
   loadUsers();
   loadStores();
   loadMenu();
   loadFeedback();
+  connectWebSocket();
+  setInterval(function () { loadUsers(); loadStats(); }, 15000);
 
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', function () {
@@ -961,31 +1041,6 @@ document.addEventListener('DOMContentLoaded', function () {
       document.getElementById('pageTitle').textContent = title[0];
       document.getElementById('pageSubtitle').textContent = title[1];
     });
-  });
-
-  document.getElementById('confirmDeleteUser')?.addEventListener('click', async function () {
-    const btn = this;
-    const spinner = document.getElementById('confirmDeleteUserSpinner');
-    const btnText = document.getElementById('confirmDeleteUserText');
-    const originalText = btnText.textContent;
-    const originalBg = btn.style.background;
-    btn.disabled = true;
-    spinner.classList.remove('d-none');
-    btnText.textContent = 'Deleting...';
-    btn.style.background = '#9ca3af';
-
-    const userId = document.getElementById('deleteUserId').value;
-    const result = await apiDelete('/api/kaon-admin/users/' + userId + '/delete/');
-    if (result) {
-      bootstrap.Modal.getInstance(document.getElementById('deleteUserModal')).hide();
-      await loadUsers();
-      await loadStats();
-    } else {
-      btn.disabled = false;
-      spinner.classList.add('d-none');
-      btnText.textContent = originalText;
-      btn.style.background = originalBg;
-    }
   });
 
   document.getElementById('confirmDeleteFeedback')?.addEventListener('click', async function () {

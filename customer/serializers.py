@@ -140,10 +140,11 @@ class StoreSerializer(serializers.ModelSerializer):
         model = Store
         fields = [
             'store_id', 'name', 'slug', 'description', 'logo', 'banner',
-            'contact_number', 'address', 'is_open',
+            'contact_number', 'contact_person', 'address', 'dti_permit',
+            'is_open', 'is_approved',
             'opening_time', 'closing_time', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['store_id', 'slug', 'created_at', 'updated_at']
+        read_only_fields = ['store_id', 'slug', 'is_approved', 'created_at', 'updated_at']
 
 
 class StoreUpdateSerializer(serializers.ModelSerializer):
@@ -151,8 +152,8 @@ class StoreUpdateSerializer(serializers.ModelSerializer):
         model = Store
         fields = [
             'name', 'description', 'logo', 'banner',
-            'contact_number', 'address', 'is_open',
-            'opening_time', 'closing_time',
+            'contact_number', 'contact_person', 'address', 'dti_permit',
+            'is_open', 'opening_time', 'closing_time',
         ]
 
 
@@ -200,6 +201,7 @@ class ApplyDiscountSerializer(serializers.Serializer):
 class MenuItemSerializer(serializers.ModelSerializer):
     category_display = serializers.SerializerMethodField()
     store_name = serializers.SerializerMethodField()
+    store_id = serializers.IntegerField(read_only=True)
     variations = ItemVariationSerializer(many=True, read_only=True)
 
     class Meta:
@@ -208,7 +210,7 @@ class MenuItemSerializer(serializers.ModelSerializer):
             'item_id', 'name', 'description', 'price', 'category', 'category_display',
             'image_url', 'is_available', 'stock', 'is_featured', 'featured_order',
             'available_from', 'available_to', 'available_days', 'low_stock_threshold',
-            'store_name', 'variations',
+            'store_name', 'store_id', 'variations',
         ]
 
     def validate(self, data):

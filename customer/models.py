@@ -20,6 +20,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=100)
     notifications_last_read_at = models.DateTimeField(blank=True, null=True)
+    deactivated_at = models.DateTimeField(blank=True, null=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'full_name', 'user_type', 'student_faculty_id']
@@ -46,7 +47,9 @@ class Store(models.Model):
     contact_number = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
     dti_permit = models.ImageField(upload_to='dti_permits/', blank=True, null=True)
+    contact_person = models.CharField(max_length=200, blank=True)
     is_open = models.BooleanField(default=True)
+    is_approved = models.BooleanField(default=False)
     opening_time = models.TimeField(null=True, blank=True)
     closing_time = models.TimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

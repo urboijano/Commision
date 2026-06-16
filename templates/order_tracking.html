@@ -102,12 +102,12 @@
 <script>
 const orderId = '{{ order_id }}';
 let ws = null;
-let statusCheckInterval = null;
 
 const STATUS_ORDER = ['pending', 'store_accepted', 'preparing', 'ready_for_pickup', 'completed'];
 const STATUS_META = {
   pending:        { label: 'Pending Acceptance',   color: '#f59e0b', icon: 'clock' },
   store_accepted: { label: 'Accepted by Store',   color: '#6b7280', icon: 'check-circle' },
+  store_rejected: { label: 'Rejected by Store',   color: '#dc2626', icon: 'x-circle' },
   preparing:      { label: 'Preparing',            color: '#c2410c', icon: 'cooking-pot' },
   ready_for_pickup: { label: 'Ready for Pick-Up',  color: '#16a34a', icon: 'bell' },
   completed:      { label: 'Completed',            color: '#16a34a', icon: 'check-check' },
@@ -140,10 +140,11 @@ async function loadTracking() {
 
   const currentIdx = STATUS_ORDER.indexOf(trackData.current_status);
   const isCancelled = trackData.current_status === 'cancelled';
+  const isRejected = trackData.current_status === 'store_rejected';
 
   const stepsHtml = STATUS_ORDER.map((status, idx) => {
     let stateClass = '';
-    if (isCancelled) {
+    if (isCancelled || isRejected) {
       stateClass = idx <= currentIdx ? 'completed' : '';
     } else {
       if (idx < currentIdx || trackData.current_status === 'completed') stateClass = 'completed';
@@ -191,7 +192,15 @@ async function loadTracking() {
     </div>
 
     <div style="background:#fff;border-radius:14px;padding:1.25rem 1rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-      ${isCancelled ? `
+      ${isRejected ? `
+        <div style="text-align:center;padding:0.5rem 0;">
+          <div style="width:48px;height:48px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem;">
+            <i data-lucide="x-circle" style="width:24px;height:24px;color:#dc2626;"></i>
+          </div>
+          <div style="font-weight:700;font-size:1rem;color:#dc2626;margin-bottom:0.2rem;">Order Rejected by Store</div>
+          <div style="font-size:0.82rem;color:#6b7280;">${trackData.rejection_reason ? 'Reason: ' + trackData.rejection_reason : 'The store has rejected this order.'}</div>
+        </div>
+      ` : isCancelled ? `
         <div style="text-align:center;padding:0.5rem 0;">
           <div style="width:48px;height:48px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem;">
             <i data-lucide="x-circle" style="width:24px;height:24px;color:#dc2626;"></i>
@@ -264,7 +273,7 @@ function connectWebSocket() {
   if (!token) return;
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws/orders/`;
+  const wsUrl = `${protocol}//${window.location.host}/ws/orders/?token=${encodeURIComponent(token)}`;
 
   try {
     ws = new WebSocket(wsUrl);
@@ -280,8 +289,12 @@ function connectWebSocket() {
     ws.onclose = function() {
       setTimeout(connectWebSocket, 3000);
     };
+
+    ws.onerror = function() {
+      ws.close();
+    };
   } catch (e) {
-    console.log('WebSocket not available, using polling');
+    setTimeout(connectWebSocket, 15000);
   }
 }
 
@@ -314,7 +327,7 @@ loadTracking();
 
 if (isAuthenticated()) {
   connectWebSocket();
-  statusCheckInterval = setInterval(loadTracking, 15000);
+  setInterval(loadTracking, 15000);
 }
 </script>
 {% endblock %}

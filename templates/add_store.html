@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block title %}Add Another Store - KaonISU{% endblock %}
+{% block content %}
+<style>
+  .navbar { display: none !important; }
+  body > .container, body .py-4 { max-width: none; padding: 0 !important; }
+  .auth-label { color: #000 !important; }
+  .auth-field:focus-within .auth-label,
+  .auth-input:not(:placeholder-shown) ~ .auth-label { color: #000 !important; }
+</style>
+<div class="landing-bg" style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
+  <div style="width: 100%; max-width: 480px;">
+    <div style="text-align: center; margin-bottom: 1.5rem;">
+      <div class="brand-mark" style="justify-content: center; font-size: 1.6rem;">
+        KaonISU <i data-lucide="utensils-crossed" class="brand-icon"></i>
+      </div>
+    </div>
+    <div class="sidebar-card" style="padding: 2rem;">
+      <h4 style="text-align: center; margin-bottom: 0.25rem; font-weight: 700;">Add Another Store</h4>
+      <p style="text-align: center; font-size: 0.8rem; color: #6b7280; margin-bottom: 1.5rem;">Submit a new store for admin approval</p>
+      <form id="addStoreForm">
+        <div class="auth-field">
+          <div class="auth-input-group">
+            <span class="auth-input-icon"><i data-lucide="store" style="width: 18px; height: 18px;"></i></span>
+            <input type="text" class="auth-input" id="storeName" required maxlength="200" placeholder=" " autocomplete="off">
+            <label class="auth-label" for="storeName">Store Name</label>
+          </div>
+        </div>
+
+        <div class="auth-field">
+          <div class="auth-input-group">
+            <span class="auth-input-icon"><i data-lucide="file-image" style="width: 18px; height: 18px;"></i></span>
+            <label class="auth-input" for="dtiPermit" style="display:flex;align-items:center;cursor:pointer;padding:0.75rem 1rem 0.75rem 2.75rem;">
+              <input type="file" id="dtiPermit" required accept="image/*" style="display:none;" onchange="var f=this.files[0];document.getElementById('dtiFileName').textContent=f?f.name+(f.size>5*1024*1024?' (too large!)':' ('+Math.round(f.size/1024)+'KB)'):'Choose file...';">
+              <span id="dtiFileName" style="color:#9ca3af;font-size:0.85rem;">Choose file...</span>
+            </label>
+            <label class="auth-label" for="dtiPermit" style="cursor:pointer;transform:translateY(-22px) scale(0.85);color:#1a1a1a;">DTI Permit</label>
+          </div>
+          <div class="auth-hint">Upload a clear photo of your DTI/SEC permit (max 5MB).</div>
+        </div>
+
+        <div class="auth-field">
+          <div class="auth-input-group">
+            <span class="auth-input-icon"><i data-lucide="user" style="width: 18px; height: 18px;"></i></span>
+            <input type="text" class="auth-input" id="contactPerson" maxlength="200" placeholder=" " autocomplete="off">
+            <label class="auth-label" for="contactPerson">Contact Person</label>
+          </div>
+        </div>
+
+        <button type="submit" class="order-btn" id="submitBtn" style="border-radius: 12px; padding: 0.85rem; font-size: 1rem; margin-top: 0.5rem;">
+          <span id="submitSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+          Submit for Approval
+        </button>
+        <a href="/dashboard/" class="auth-btn-outline">
+          Cancel — Back to Dashboard
+        </a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+lucide.createIcons();
+
+function compressImageFile(file, maxWidth, quality) {
+    return new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var img = new Image();
+            img.onload = function() {
+                var canvas = document.createElement('canvas');
+                var w = img.width, h = img.height;
+                if (w > maxWidth) {
+                    h = Math.round(h * maxWidth / w);
+                    w = maxWidth;
+                }
+                canvas.width = w;
+                canvas.height = h;
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                canvas.toBlob(function(blob) {
+                    var name = file.name.replace(/\.(png|jpe?g)$/i, '.jpg');
+                    var compressed = new File([blob], name, { type: 'image/jpeg' });
+                    resolve(compressed);
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = function() { resolve(file); };
+            img.src = e.target.result;
+        };
+        reader.onerror = function() { resolve(file); };
+        reader.readAsDataURL(file);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('addStoreForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        const spinner = document.getElementById('submitSpinner');
+
+        const storeName = document.getElementById('storeName').value.trim();
+        if (!storeName) {
+            showAlert('Please enter a store name.', 'danger');
+            return;
+        }
+
+        const dtiFile = document.getElementById('dtiPermit').files[0];
+        if (!dtiFile) {
+            showAlert('Please upload your DTI permit photo.', 'danger');
+            return;
+        }
+
+        if (dtiFile.size > 5 * 1024 * 1024) {
+            showAlert('DTI permit photo must be under 5MB.', 'danger');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Compressing...';
+
+        try {
+            const compressedFile = await compressImageFile(dtiFile, 1200, 0.75);
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Submitting...';
+            const formData = new FormData();
+            formData.append('name', storeName);
+            formData.append('dti_permit', compressedFile);
+            formData.append('contact_person', document.getElementById('contactPerson').value.trim());
+
+            const result = await apiPostFormData('/api/store/manage/', formData);
+
+            if (result && result.store_id) {
+                showAlert('Store submitted for admin approval. You will be notified once approved.', 'success');
+                setTimeout(function() { window.location.href = '/dashboard/'; }, 2500);
+                return;
+            }
+        } catch (e) {
+            if (e && e.message) showAlert(e.message, 'danger');
+        }
+        btn.disabled = false;
+        btn.innerHTML = 'Submit for Approval';
+    });
+});
+</script>
+{% endblock %}
