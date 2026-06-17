@@ -1,13 +1,16 @@
 import json
+import logging
 from urllib.parse import parse_qs
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
+from asgiref.sync import async_to_sync, sync_to_async
 from rest_framework_simplejwt.tokens import AccessToken
 from .models import User
+
+logger = logging.getLogger(__name__)
 
 
 class OrderConsumer(AsyncWebsocketConsumer):
@@ -18,16 +21,17 @@ class OrderConsumer(AsyncWebsocketConsumer):
         if token:
             try:
                 access = AccessToken(token)
-                user = User.objects.get(user_id=access['user_id'])
+                user = await sync_to_async(User.objects.get)(user_id=access['user_id'])
                 self.scope['user'] = user
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"WebSocket auth failed: {e}")
         self.user = self.scope.get('user')
         if self.user and self.user.is_authenticated:
             self.group_name = f"user_{self.user.user_id}"
+            self._is_admin = self.user.user_type == 'admin'
             await self.channel_layer.group_add(self.group_name, self.channel_name)
             await self.channel_layer.group_add('menu_updates', self.channel_name)
-            if self.user.user_type == 'admin':
+            if self._is_admin:
                 await self.channel_layer.group_add('admin', self.channel_name)
             await self.accept()
         else:
@@ -37,6 +41,8 @@ class OrderConsumer(AsyncWebsocketConsumer):
         if hasattr(self, 'group_name'):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
             await self.channel_layer.group_discard('menu_updates', self.channel_name)
+            if getattr(self, '_is_admin', False):
+                await self.channel_layer.group_discard('admin', self.channel_name)
 
     async def receive(self, text_data):
         pass
@@ -54,6 +60,9 @@ class OrderConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps(event['data']))
 
     async def store_approved(self, event):
+        await self.send(text_data=json.dumps(event['data']))
+
+    async def store_status_changed(self, event):
         await self.send(text_data=json.dumps(event['data']))
 
 
@@ -212,4 +221,23 @@ def notify_menu_updated():
                 'message': 'Menu availability updated',
             }
         }
+    )
+
+
+def notify_store_status_changed(store_id, is_open, store_name, owner_id):
+    channel_layer = get_channel_layer()
+    data = {
+        'type': 'store_status_changed',
+        'store_id': store_id,
+        'is_open': is_open,
+        'store_name': store_name,
+        'message': f'Store "{store_name}" is now {"Open" if is_open else "Closed"}',
+    }
+    async_to_sync(channel_layer.group_send)(
+        'admin',
+        {'type': 'store_status_changed', 'data': data}
+    )
+    async_to_sync(channel_layer.group_send)(
+        f'user_{owner_id}',
+        {'type': 'store_status_changed', 'data': data}
     )

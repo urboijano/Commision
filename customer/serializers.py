@@ -108,10 +108,17 @@ class LoginSerializer(serializers.Serializer):
 
 class UserSerializer(serializers.ModelSerializer):
     user_type_display = serializers.CharField(source='get_user_type_display', read_only=True)
+    stores = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['user_id', 'full_name', 'email', 'user_type', 'user_type_display', 'student_faculty_id', 'store_name', 'dti_permit', 'faculty_id_image', 'is_active', 'date_joined']
+        fields = ['user_id', 'full_name', 'email', 'user_type', 'user_type_display', 'student_faculty_id', 'store_name', 'stores', 'dti_permit', 'faculty_id_image', 'is_active', 'date_joined']
+
+    def get_stores(self, obj):
+        stores_qs = getattr(obj, 'stores', None)
+        if stores_qs is None:
+            return []
+        return list(stores_qs.filter(is_approved=True).values_list('name', flat=True))
 
 
 class StoreProfileSerializer(serializers.ModelSerializer):

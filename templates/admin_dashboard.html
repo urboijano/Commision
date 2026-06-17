@@ -231,7 +231,7 @@
         <div class="card-body" style="padding:0;overflow-x:auto;">
           <table class="admin-table">
             <thead>
-              <tr><th>Store</th><th>Owner</th><th>Items</th><th>Approval</th><th>Status</th><th>Joined</th><th></th></tr>
+              <tr><th>Store</th><th>Owner</th><th>Items</th><th>Status</th><th>Joined</th><th>Closed Date</th><th></th></tr>
             </thead>
             <tbody id="adminStoreList"></tbody>
           </table>
@@ -490,7 +490,7 @@ function renderPendingStores() {
   const pending = adminStores.filter(s => !s.is_approved && s.is_active);
   document.getElementById('pendingStoreCount').textContent = pending.length || 0;
   if (!pending.length) {
-    container.innerHTML = '<div class="text-center py-4"><p class="text-muted small mb-0" style="font-size:0.85rem;">No pending store approvals.</p></div>';
+    container.innerHTML = '<div class="text-center py-5"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="inbox" style="width:40px;height:40px;"></i></div><p class="text-muted small mb-0" style="font-size:0.85rem;">No pending store approvals.</p></div>';
     return;
   }
   container.innerHTML =
@@ -611,8 +611,8 @@ function renderUsers() {
     if (!q) return true;
     return (u.full_name && u.full_name.toLowerCase().includes(q)) ||
            (u.email && u.email.toLowerCase().includes(q)) ||
-           (u.store_name && u.store_name.toLowerCase().includes(q)) ||
-           (u.student_faculty_id && u.student_faculty_id.toLowerCase().includes(q));
+            (u.stores && u.stores.some(s => s.toLowerCase().includes(q))) ||
+            (u.student_faculty_id && u.student_faculty_id.toLowerCase().includes(q));
   });
   if (!filtered.length) {
     tbody.innerHTML = '<tr><td colspan="5" style="padding:3rem 0;text-align:center;"><div style="font-size:2.5rem;color:#d1d5db;margin-bottom:0.5rem;"><i data-lucide="search-x" style="width:36px;height:36px;"></i></div><p style="color:#9ca3af;font-size:0.85rem;margin:0;">No users match your search.</p></td></tr>';
@@ -625,7 +625,7 @@ function renderUsers() {
     const typeColor = u.user_type === 'admin' ? '#7c3aed' : u.user_type === 'store_owner' ? '#f97316' : u.user_type === 'faculty' ? '#3b82f6' : '#16a34a';
     const typeLabel = u.user_type_display || u.user_type;
     return '<tr>' +
-      '<td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="user-avatar-sm" style="background:' + colors[i % colors.length] + ';color:#1a1a1a;">' + initial + '</div><div><strong style="font-size:0.85rem;">' + escapeHtml(u.full_name) + '</strong>' + (u.store_name ? '<span class="text-muted small d-block">' + escapeHtml(u.store_name) + '</span>' : '') + '</div></div></td>' +
+      '<td><div style="display:flex;align-items:center;gap:0.5rem;"><div class="user-avatar-sm" style="background:' + colors[i % colors.length] + ';color:#1a1a1a;">' + initial + '</div><div><strong style="font-size:0.85rem;">' + escapeHtml(u.full_name) + '</strong>' + (u.stores && u.stores.length ? '<span class="text-muted small d-block">' + u.stores.map(s => escapeHtml(s)).join(', ') + '</span>' : '') + '</div></div></td>' +
       '<td class="text-muted">' + escapeHtml(u.email) + '</td>' +
       '<td><span class="badge-status" style="background:' + typeColor + ';color:#fff;">' + typeLabel + '</span></td>' +
       '<td><span class="badge-status" style="background:' + (u.is_active ? '#16a34a' : '#ef4444') + ';color:#fff;">' + (u.is_active ? 'Active' : 'Inactive') + '</span></td>' +
@@ -642,17 +642,13 @@ function renderUsers() {
 function renderStores() {
   const tbody = document.getElementById('adminStoreList');
   if (!adminStores.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-muted small text-center py-4">No stores registered yet.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-muted small text-center py-4">No stores registered yet.</td></tr>';
     document.getElementById('adminStoreCount').textContent = '0';
     return;
   }
   tbody.innerHTML = adminStores.filter(s => s.is_approved).map(s => {
     const statusColor = s.is_deactivated ? '#6b7280' : s.is_open ? '#16a34a' : '#f59e0b';
     const statusLabel = s.is_deactivated ? 'Deactivated' : s.is_open ? 'Open' : 'Closed';
-    const approvalColor = s.is_approved ? '#16a34a' : '#f59e0b';
-    const approvalLabel = s.is_approved ? 'Approved' : 'Pending';
-    const approveBtn = s.is_approved ? '' :
-      '<button class="icon-btn" style="width:30px;height:30px;color:#16a34a;display:inline-flex;" onclick="event.stopPropagation();approveStore(' + s.store_id + ')" title="Approve Store"><i data-lucide="check-circle" style="width:16px;height:16px;"></i></button>';
     return '<tr style="cursor:pointer;" onclick="openStoreMenu(' + s.store_id + ',\'' + escapeHtml(s.store_name) + '\')">' +
       '<td><div style="display:flex;align-items:center;gap:0.5rem;">' +
         '<div style="width:32px;height:32px;border-radius:8px;background:#f97316;display:flex;align-items:center;justify-content:center;"><i data-lucide="store" style="width:16px;height:16px;color:#fff;"></i></div>' +
@@ -660,10 +656,10 @@ function renderStores() {
       '</div></td>' +
       '<td><div><strong style="font-size:0.82rem;">' + escapeHtml(s.full_name) + '</strong><span class="text-muted small d-block" style="font-size:0.7rem;">' + escapeHtml(s.email) + '</span></div></td>' +
       '<td class="text-muted">' + (s.menu_count || 0) + '</td>' +
-      '<td><span class="badge-status" style="background:' + approvalColor + ';color:#fff;">' + approvalLabel + '</span></td>' +
       '<td><span class="badge-status" style="background:' + statusColor + ';color:#fff;">' + statusLabel + '</span></td>' +
       '<td class="text-muted" style="font-size:0.75rem;">' + (s.date_joined ? new Date(s.date_joined).toLocaleDateString() : '-') + '</td>' +
-      '<td style="text-align:right;white-space:nowrap;">' + approveBtn + '</td>' +
+      '<td class="text-muted" style="font-size:0.75rem;">' + (s.closed_at ? new Date(s.closed_at).toLocaleDateString() : '-') + '</td>' +
+      '<td style="text-align:right;white-space:nowrap;"></td>' +
     '</tr>';
   }).join('');
   document.getElementById('adminStoreCount').textContent = adminStores.filter(s => s.is_approved).length;
@@ -874,7 +870,7 @@ function viewUser(userId) {
       '<div style="background:#f9fafb;border-radius:10px;padding:0.75rem 1rem;"><span class="text-muted small d-block">Status</span><strong style="font-size:0.9rem;">' + statusLabel + '</strong></div>' +
       (u.user_type !== 'faculty' && u.user_type !== 'store_owner' ? '<div style="background:#f9fafb;border-radius:10px;padding:0.75rem 1rem;"><span class="text-muted small d-block">Student/Faculty ID</span><strong style="font-size:0.9rem;">' + escapeHtml(u.student_faculty_id || '-') + '</strong></div>' : '') +
       '<div style="background:#f9fafb;border-radius:10px;padding:0.75rem 1rem;"><span class="text-muted small d-block">Joined</span><strong style="font-size:0.9rem;">' + (u.date_joined ? new Date(u.date_joined).toLocaleDateString() : '-') + '</strong></div>' +
-      (u.store_name ? '<div style="background:#f9fafb;border-radius:10px;padding:0.75rem 1rem;"><span class="text-muted small d-block">Store</span><strong style="font-size:0.9rem;">' + escapeHtml(u.store_name) + '</strong></div>' : '') +
+      (u.stores && u.stores.length ? '<div style="background:#f9fafb;border-radius:10px;padding:0.75rem 1rem;"><span class="text-muted small d-block">Store</span><strong style="font-size:0.9rem;">' + u.stores.map(s => escapeHtml(s)).join(', ') + '</strong></div>' : '') +
       (u.user_type === 'faculty' && u.faculty_id_image ? '<div style="background:#f9fafb;border-radius:10px;padding:0.75rem 1rem;grid-column:1/-1;text-align:center;"><span class="text-muted small d-block">Faculty ID Photo</span><img src="' + u.faculty_id_image + '" alt="Faculty ID" style="width:100%;max-height:180px;object-fit:contain;border-radius:8px;margin-top:0.3rem;cursor:pointer;" onclick="openFacultyIdModal(\'' + u.faculty_id_image + '\')"></div>' : '') +
     '</div>';
   lucide.createIcons();
@@ -989,6 +985,9 @@ function connectWebSocket() {
         loadStats();
         showAlert(data.message, 'info');
     }
+    if (data.type === 'store_status_changed') {
+        loadStores();
+    }
     };
     ws.onclose = function () {
       console.log('WebSocket closed, reconnecting...');
@@ -1010,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', function () {
   loadMenu();
   loadFeedback();
   connectWebSocket();
-  setInterval(function () { loadUsers(); loadStats(); }, 15000);
+  setInterval(function () { loadUsers(); loadStores(); loadStats(); }, 15000);
 
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', function () {

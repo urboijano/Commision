@@ -25,6 +25,7 @@ from .models import (
     Order, OrderItem, OrderStatusHistory, Feedback, StoreProfile, Store,
     Discount, BundleDeal, BundleItem, StoreOwnerStatus,
 )
+from .consumers import notify_store_status_changed
 from .serializers import (
     RegisterSerializer, StoreRegisterSerializer, LoginSerializer, UserSerializer,
     MenuItemSerializer, MenuItemDetailSerializer, CartSerializer, CartItemSerializer,
@@ -177,10 +178,24 @@ def store_profile(request):
 def store_toggle_open(request):
     if request.user.user_type != 'store_owner':
         return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
-    profile = get_object_or_404(StoreProfile, user=request.user)
-    profile.is_open = not profile.is_open
-    profile.save(update_fields=['is_open'])
-    return Response({'is_open': profile.is_open})
+
+    store_id = request.session.get('active_store_id')
+    if store_id:
+        store = Store.objects.filter(store_id=store_id, owner=request.user).first()
+    else:
+        store = Store.objects.filter(owner=request.user).first()
+    if not store:
+        return Response({'error': 'No store found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    store.is_open = not store.is_open
+    if store.is_open:
+        store.closed_at = None
+    else:
+        store.closed_at = timezone.now()
+    store.save(update_fields=['is_open', 'closed_at'])
+    notify_store_status_changed(store.store_id, store.is_open, store.name, request.user.user_id)
+
+    return Response({'is_open': store.is_open})
 
 
 def get_active_store(request):
@@ -375,7 +390,7 @@ def me(request):
 @permission_classes([AllowAny])
 def menu_list(request):
     category = request.query_params.get('category')
-    items = MenuItem.objects.filter(is_available=True, store__is_approved=True).select_related('store_owner')
+    items = MenuItem.objects.filter(is_available=True, store__is_approved=True, store__is_open=True).select_related('store_owner')
     if category:
         items = items.filter(category=category)
     serializer = MenuItemSerializer(items, many=True)
@@ -1383,7 +1398,7 @@ def admin_stats(request):
 def admin_users(request):
     if request.user.user_type != 'admin':
         return Response({'error': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
-    users = User.objects.all().order_by('-date_joined')
+    users = User.objects.prefetch_related('stores').all().order_by('-date_joined')
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data)
 
@@ -1668,6 +1683,7 @@ def admin_stores(request):
             'deactivation_reason': status_obj.deactivation_reason if status_obj else '',
             'resubmit_count': status_obj.resubmit_count if status_obj else 0,
             'menu_count': menu_count,
+            'closed_at': s.closed_at.isoformat() if s.closed_at else None,
             'date_joined': s.created_at.isoformat(),
         })
     return Response(data)

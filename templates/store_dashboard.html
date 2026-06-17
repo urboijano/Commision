@@ -79,6 +79,22 @@
   .notif-empty { padding: 2rem; text-align: center; color: #9ca3af; font-size: 0.85rem; }
   .notif-overlay { position: fixed; inset: 0; z-index: 999; display: none; }
   .notif-overlay.open { display: block; }
+  .store-status-toggle {
+    display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.75rem;
+    border-radius: 2rem; border: none; cursor: pointer; font-size: 0.78rem;
+    font-weight: 700; transition: all 0.2s; flex-shrink: 0;
+  }
+  .store-status-toggle.open {
+    background: #16a34a; color: #fff;
+  }
+  .store-status-toggle.closed {
+    background: #ef4444; color: #fff;
+  }
+  .store-status-dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  }
+  .store-status-toggle.open .store-status-dot { background: #fff; }
+  .store-status-toggle.closed .store-status-dot { background: #fff; }
 </style>
 
 <div class="store-layout">
@@ -141,6 +157,10 @@
 
           </div>
         </div>
+        <button id="storeStatusToggle" class="store-status-toggle open" title="Toggle store open/closed">
+          <span class="store-status-dot"></span>
+          <span id="storeStatusLabel">Open</span>
+        </button>
         <div class="store-avatar">{{ user.store_name|first }}</div>
       </div>
     </div>
@@ -418,6 +438,7 @@ let notifData = null;
 let ws = null;
 let stores = [];
 let activeStoreId = null;
+let storeIsOpen = true;
 
 const pageMeta = {
   overview: ['Overview', 'Store performance summary'],
@@ -840,6 +861,23 @@ function renderStoreSelector() {
   lucide.createIcons();
 }
 
+function updateStoreToggleUI(isOpen) {
+  const btn = document.getElementById('storeStatusToggle');
+  const label = document.getElementById('storeStatusLabel');
+  if (!btn || !label) return;
+  btn.className = 'store-status-toggle ' + (isOpen ? 'open' : 'closed');
+  label.textContent = isOpen ? 'Open' : 'Closed';
+  storeIsOpen = isOpen;
+}
+
+function loadStoreStatus() {
+  if (!activeStoreId) return;
+  const active = stores.find(s => s.store_id === activeStoreId);
+  if (active) {
+    updateStoreToggleUI(active.is_open !== undefined ? active.is_open : true);
+  }
+}
+
 async function deleteStore(storeId, storeName) {
   if (!confirm('Remove "' + storeName + '"? This cannot be undone.')) return;
   const result = await apiDelete('/api/store/manage/' + storeId + '/');
@@ -859,6 +897,7 @@ async function switchStore(storeId) {
       loadMenu(),
       loadFeedback(),
       loadNotifications(),
+      loadStoreStatus(),
     ]);
   }
 }
@@ -976,7 +1015,11 @@ function connectWebSocket() {
     ws.onmessage = function (event) {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'new_order') {
+        if (data.type === 'store_status_changed') {
+          if (data.store_id === activeStoreId) {
+            updateStoreToggleUI(data.is_open);
+          }
+        } else if (data.type === 'new_order') {
           loadNotifications();
           loadOrders();
           loadMenu();
@@ -1019,8 +1062,9 @@ function loadAllDashboardData() {
   loadMenu();
   loadFeedback();
   loadNotifications();
+  loadStoreStatus();
   connectWebSocket();
-  setInterval(function () { loadNotifications(); loadOrders(); loadMenu(); loadFeedback(); }, 15000);
+  setInterval(function () { loadNotifications(); loadOrders(); loadMenu(); loadFeedback(); loadStoreStatus(); }, 15000);
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -1035,6 +1079,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.addEventListener('click', function () {
     document.getElementById('storeDropdown').style.display = 'none';
+  });
+
+  document.getElementById('storeStatusToggle').addEventListener('click', async function () {
+    const btn = this;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    const result = await apiPost('/api/store/profile/toggle-open/', {});
+    if (result && typeof result.is_open !== 'undefined') {
+      updateStoreToggleUI(result.is_open);
+    } else {
+      updateStoreToggleUI(storeIsOpen);
+    }
+    btn.disabled = false;
   });
 
   document.getElementById('notifBtn').addEventListener('click', function (e) {
