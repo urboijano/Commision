@@ -433,12 +433,14 @@ class MenuItemDetailSerializer(serializers.ModelSerializer):
     store_owner_name = serializers.SerializerMethodField()
     store_name = serializers.SerializerMethodField()
     feedbacks = serializers.SerializerMethodField()
+    similar_items = serializers.SerializerMethodField()
 
     class Meta:
         model = MenuItem
         fields = [
             'item_id', 'name', 'description', 'price', 'category', 'category_display',
-            'image_url', 'is_available', 'stock', 'store_owner_name', 'store_name', 'feedbacks'
+            'image_url', 'is_available', 'stock', 'store_owner_name', 'store_name',
+            'feedbacks', 'similar_items',
         ]
 
     def get_category_display(self, obj):
@@ -458,5 +460,38 @@ class MenuItemDetailSerializer(serializers.ModelSerializer):
         from django.db.models import Prefetch
         order_items = OrderItem.objects.filter(item=obj).select_related('order')
         order_ids = order_items.values_list('order_id', flat=True).distinct()
-        feedbacks = Feedback.objects.filter(order_id__in=order_ids).select_related('user').order_by('-created_at')[:10]
+        feedbacks = Feedback.objects.filter(order_id__in=order_ids).select_related('user').order_by('-created_at')[:200]
         return FeedbackSerializer(feedbacks, many=True).data
+
+    def get_similar_items(self, obj):
+        items = MenuItem.objects.filter(
+            name__iexact=obj.name,
+            is_available=True,
+            store__is_approved=True,
+            store__is_open=True,
+        ).exclude(store_id=obj.store_id).select_related('store')[:50]
+
+        result = []
+        for item in items:
+            order_item_ids = OrderItem.objects.filter(item=item).values_list('order_id', flat=True).distinct()
+            feedback_qs = Feedback.objects.filter(order_id__in=order_item_ids).select_related('user').order_by('-created_at')
+            total = feedback_qs.count()
+            latest = feedback_qs.first()
+            avg = round(sum(f.rating for f in feedback_qs) / total, 1) if total else 0
+
+            result.append({
+                'item_id': item.item_id,
+                'price': str(item.price),
+                'store_id': item.store_id,
+                'store_name': item.store.name,
+                'average_rating': avg,
+                'total_feedbacks': total,
+                'latest_feedback': {
+                    'rating': latest.rating,
+                    'comments': latest.comments or '',
+                    'user_name': latest.user.full_name,
+                } if latest else None,
+            })
+
+        result.sort(key=lambda x: (-x['average_rating'], float(x['price'])))
+        return result

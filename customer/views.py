@@ -390,11 +390,21 @@ def me(request):
 @permission_classes([AllowAny])
 def menu_list(request):
     category = request.query_params.get('category')
+    store = request.query_params.get('store')
     items = MenuItem.objects.filter(is_available=True, store__is_approved=True, store__is_open=True).select_related('store_owner')
     if category:
         items = items.filter(category=category)
+    if store:
+        items = items.filter(store_id=store)
     serializer = MenuItemSerializer(items, many=True)
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def active_stores(request):
+    stores = Store.objects.filter(is_approved=True, is_open=True).only('store_id', 'name').order_by('name')
+    return Response([{'store_id': s.store_id, 'name': s.name} for s in stores])
 
 
 @api_view(['GET'])

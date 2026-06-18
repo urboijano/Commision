@@ -96,7 +96,7 @@
 </div>
 
 <div class="modal fade" id="itemDetailModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" style="max-width:760px;">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:960px;">
     <div class="modal-content" style="border-radius:20px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.15);overflow:hidden;">
       <button type="button" data-bs-dismiss="modal" style="position:absolute;top:16px;right:16px;z-index:10;width:32px;height:32px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -137,8 +137,31 @@
 
           <div style="width:1px;background:#f0f0f0;flex-shrink:0;"></div>
 
-          <div style="flex:1;padding:1.25rem 1.5rem 1.25rem 1.25rem;display:flex;flex-direction:column;min-width:0;">
-            <div id="modalFeedbacksSection" style="display:none;flex-direction:column;min-height:0;">
+          <div style="width:280px;padding:1.25rem 1rem;display:flex;flex-direction:column;min-width:0;">
+            <div id="modalSimilarSection" style="display:none;flex-direction:column;min-height:0;flex:1;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem;">
+                <div style="display:flex;align-items:center;gap:0.4rem;">
+                  <i data-lucide="store" style="width:14px;height:14px;color:#9ca3af;flex-shrink:0;"></i>
+                  <span style="font-size:0.78rem;font-weight:600;color:#6b7280;">ALSO AT</span>
+                </div>
+                <select id="similarSortSelect" style="font-size:0.7rem;padding:0.2rem 0.4rem;border-radius:6px;border:1px solid #e5e7eb;background:#fff;color:#374151;cursor:pointer;">
+                  <option value="rating-desc">Highest Rated</option>
+                  <option value="rating-asc">Lowest Rated</option>
+                  <option value="price-asc">Lowest Price</option>
+                  <option value="price-desc">Highest Price</option>
+                </select>
+              </div>
+              <div id="modalSimilarList" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:0.5rem;min-height:0;"></div>
+            </div>
+            <div id="modalNoSimilar" style="display:none;flex-direction:column;flex:1;align-items:center;justify-content:center;padding:2rem 0;">
+              <span style="font-size:0.8rem;color:#d1d5db;">No other stores sell this item</span>
+            </div>
+          </div>
+
+          <div style="width:1px;background:#f0f0f0;flex-shrink:0;"></div>
+
+          <div style="width:280px;padding:1.25rem 1.25rem 1.25rem 1rem;display:flex;flex-direction:column;min-width:0;">
+            <div id="modalFeedbacksSection" style="display:none;flex-direction:column;min-height:0;flex:1;">
               <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.65rem;">
                 <i data-lucide="message-square-text" style="width:14px;height:14px;color:#9ca3af;flex-shrink:0;"></i>
                 <span style="font-size:0.78rem;font-weight:600;color:#6b7280;">FEEDBACKS</span>
@@ -359,6 +382,66 @@ document.addEventListener('click', function(e) {
   if (itemId) openItemDetail(itemId);
 });
 
+let currentSimilarItems = [];
+
+function renderSimilarItems(sortBy) {
+  const container = document.getElementById('modalSimilarList');
+  const section = document.getElementById('modalSimilarSection');
+  const noSimilar = document.getElementById('modalNoSimilar');
+
+  if (!currentSimilarItems || currentSimilarItems.length === 0) {
+    section.style.display = 'none';
+    noSimilar.style.display = 'flex';
+    return;
+  }
+
+  section.style.display = 'flex';
+  noSimilar.style.display = 'none';
+
+  let sorted = [...currentSimilarItems];
+  if (sortBy === 'rating-desc') sorted.sort((a, b) => b.average_rating - a.average_rating || parseFloat(a.price) - parseFloat(b.price));
+  else if (sortBy === 'rating-asc') sorted.sort((a, b) => a.average_rating - b.average_rating || parseFloat(a.price) - parseFloat(b.price));
+  else if (sortBy === 'price-asc') sorted.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+  else if (sortBy === 'price-desc') sorted.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+
+  container.innerHTML = sorted.map(s => {
+    const stars = '★'.repeat(Math.round(s.average_rating)) + '☆'.repeat(5 - Math.round(s.average_rating));
+    return `
+      <div style="background:#f9fafb;border-radius:10px;padding:0.6rem 0.75rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+          <div style="display:flex;align-items:center;gap:0.4rem;min-width:0;flex:1;">
+            <i data-lucide="store" style="width:13px;height:13px;color:#374151;flex-shrink:0;"></i>
+            <span style="font-weight:600;font-size:0.8rem;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.store_name}</span>
+          </div>
+          <span style="font-size:0.85rem;font-weight:800;color:#059669;flex-shrink:0;margin-left:0.5rem;">₱${parseFloat(s.price).toFixed(2)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.35rem;margin-bottom:0.25rem;">
+          <span style="color:#f59e0b;font-size:0.65rem;letter-spacing:0.05em;">${stars}</span>
+          <span style="font-size:0.65rem;color:#9ca3af;font-weight:500;">${s.average_rating > 0 ? s.average_rating.toFixed(1) : '—'}</span>
+          <span style="font-size:0.6rem;color:#d1d5db;">(${s.total_feedbacks})</span>
+        </div>
+        ${s.latest_feedback ? `<div style="font-size:0.7rem;color:#6b7280;font-style:italic;margin-bottom:0.35rem;line-height:1.4;">"${s.latest_feedback.comments || 'No comment.'}" — ${s.latest_feedback.user_name}</div>` : '<div style="font-size:0.7rem;color:#d1d5db;margin-bottom:0.35rem;">No ratings yet</div>'}
+        <button class="similar-add-btn" data-item-id="${s.item_id}" style="width:100%;padding:0.35rem;font-size:0.72rem;border:none;border-radius:8px;background:#111827;color:#fff;font-weight:600;cursor:pointer;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+          <i data-lucide="shopping-cart" style="width:12px;height:12px;"></i> Add to Cart
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  lucide.createIcons();
+
+  container.querySelectorAll('.similar-add-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = parseInt(this.dataset.itemId);
+      addToCart(id, this);
+    });
+  });
+}
+
+document.getElementById('similarSortSelect')?.addEventListener('change', function() {
+  renderSimilarItems(this.value);
+});
+
 async function openItemDetail(itemId) {
   const modal = new bootstrap.Modal(document.getElementById('itemDetailModal'));
   modal.show();
@@ -367,6 +450,8 @@ async function openItemDetail(itemId) {
   document.getElementById('modalStoreOwner').style.display = 'none';
   document.getElementById('modalFeedbacksSection').style.display = 'none';
   document.getElementById('modalNoFeedback').style.display = 'none';
+  document.getElementById('modalSimilarSection').style.display = 'none';
+  document.getElementById('modalNoSimilar').style.display = 'none';
   document.querySelector('.add-to-cart-modal-btn').dataset.itemId = '';
 
   const data = await apiGet(`/api/menu/${itemId}/`);
@@ -394,6 +479,10 @@ async function openItemDetail(itemId) {
   } else {
     document.getElementById('modalStoreOwner').style.display = 'none';
   }
+
+  currentSimilarItems = data.similar_items || [];
+  document.getElementById('similarSortSelect').value = 'rating-desc';
+  renderSimilarItems('rating-desc');
 
   const feedbacksEl = document.getElementById('modalFeedbacksList');
   const feedbacksSection = document.getElementById('modalFeedbacksSection');
