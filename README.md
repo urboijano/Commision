@@ -1,9 +1,11 @@
 # 🏪 Canteen Food Ordering System
 
-[![Python 3.14](https://img.shields.io/badge/Python-3.14-blue?logo=python)](https://python.org)
-[![Django 6.0](https://img.shields.io/badge/Django-6.0-green?logo=django)](https://djangoproject.com)
-[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)]()
+<p align="center">
+  <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.14-blue?logo=python" alt="Python 3.14"></a>
+  <a href="https://djangoproject.com"><img src="https://img.shields.io/badge/Django-6.0-green?logo=django" alt="Django 6.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow" alt="License"></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs Welcome"></a>
+</p>
 
 A real-time food ordering platform designed for school and university canteens. Students and faculty can browse menus, place orders, and track their order status live via WebSockets — all from their mobile or desktop browser.
 
@@ -40,6 +42,7 @@ A real-time food ordering platform designed for school and university canteens. 
 | **SimpleJWT** | JWT authentication |
 | **Django Channels** | WebSocket support |
 | **SQLite** | Database |
+| **Memurai** | Redis-compatible server for WebSocket channel layer (Windows) |
 | **Bootstrap 5.3** | Frontend UI |
 | **Vanilla JavaScript** | Client-side logic |
 
@@ -150,10 +153,11 @@ Connect to `ws://host/ws/orders/` with session auth to receive real-time order s
 
 - Python 3.14+
 - pip
+- [Memurai](https://www.memurai.com/) — Redis-compatible server for WebSocket support (must be running on port 6379)
 
 ### Quick Setup (Windows)
 
-Run the automated setup script — it handles everything from creating a virtual environment to seeding sample data:
+Make sure [Memurai](https://www.memurai.com/) (or Redis) is installed and running on port **6379**, then run the automated setup script — it handles everything from creating a virtual environment to seeding sample data:
 
 ```bash
 setup.bat
@@ -165,6 +169,9 @@ setup.bat
 # Clone the repository
 git clone https://github.com/urboijano/Commision.git
 cd Commision
+
+# Install and start Memurai (Windows) — download from https://www.memurai.com/
+# Ensure it is running on port 6379 before starting the server.
 
 # Create and activate virtual environment
 python -m venv venv
