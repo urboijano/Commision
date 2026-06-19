@@ -163,8 +163,8 @@ setup.bat
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/food-ordering.git
-cd food-ordering
+git clone https://github.com/urboijano/Commision.git
+cd Commision
 
 # Create and activate virtual environment
 python -m venv venv
