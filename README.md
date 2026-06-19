@@ -1,8 +1,25 @@
-# Canteen Food Ordering System
+# 🏪 Canteen Food Ordering System
+
+[![Python 3.14](https://img.shields.io/badge/Python-3.14-blue?logo=python)](https://python.org)
+[![Django 6.0](https://img.shields.io/badge/Django-6.0-green?logo=django)](https://djangoproject.com)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)]()
 
 A real-time food ordering platform designed for school and university canteens. Students and faculty can browse menus, place orders, and track their order status live via WebSockets — all from their mobile or desktop browser.
 
-## Features
+## 📋 Table of Contents
+
+- [✨ Features](#-features)
+- [🛠️ Tech Stack](#%EF%B8%8F-tech-stack)
+- [📁 Project Structure](#-project-structure)
+- [🗄️ Models](#%EF%B8%8F-models)
+- [🔌 API Endpoints](#-api-endpoints)
+- [🔗 WebSocket](#-websocket)
+- [🚀 Getting Started](#-getting-started)
+- [📖 Order Status Flow](#-order-status-flow)
+- [📄 License](#-license)
+
+## ✨ Features
 
 - **Role-based registration** — Students and faculty register using their school ID, validated against a pre-seeded whitelist
 - **Menu browsing** — Browse canteen items filtered by category (Rice Meals, Noodles, Drinks, Snacks, Desserts)
@@ -13,7 +30,7 @@ A real-time food ordering platform designed for school and university canteens. 
 - **JWT authentication** — Token-based auth with automatic refresh
 - **Mobile-responsive** — Built with Bootstrap 5, works on any device
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 | Technology | Purpose |
 |---|---|
@@ -26,7 +43,7 @@ A real-time food ordering platform designed for school and university canteens. 
 | **Bootstrap 5.3** | Frontend UI |
 | **Vanilla JavaScript** | Client-side logic |
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 food-ordering/
@@ -57,10 +74,12 @@ food-ordering/
 │   ├── feedback.html
 │   └── my_orders.html
 ├── manage.py
+├── requirements.txt                # Python dependencies
+├── setup.bat                       # Automated Windows setup script
 └── db.sqlite3
 ```
 
-## Models
+## 🗄️ Models
 
 | Model | Description |
 |---|---|
@@ -74,7 +93,7 @@ food-ordering/
 | `OrderStatusHistory` | Full status change audit trail |
 | `Feedback` | Rating and comments for completed orders |
 
-## API Endpoints
+## 🔌 API Endpoints
 
 ### Authentication
 | Method | Endpoint | Description |
@@ -121,17 +140,26 @@ food-ordering/
 | POST | `/api/seed/menu/` | Populate 15 menu items |
 | POST | `/api/seed/ids/` | Populate 5 valid school IDs |
 
-## WebSocket
+## 🔗 WebSocket
 
 Connect to `ws://host/ws/orders/` with session auth to receive real-time order status updates. Falls back to polling every 15 seconds.
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
+
 - Python 3.14+
 - pip
 
-### Installation
+### Quick Setup (Windows)
+
+Run the automated setup script — it handles everything from creating a virtual environment to seeding sample data:
+
+```bash
+setup.bat
+```
+
+### Manual Setup
 
 ```bash
 # Clone the repository
@@ -147,8 +175,8 @@ python -m venv venv
 # macOS/Linux
 # source venv/bin/activate
 
-# Install dependencies
-pip install django djangorestframework djangorestframework-simplejwt django-cors-headers channels
+# Install dependencies from requirements.txt
+pip install -r requirements.txt
 
 # Run migrations
 python manage.py migrate
@@ -161,9 +189,6 @@ python manage.py createsuperuser
 
 # Run the server (ASGI for WebSocket support)
 uvicorn food_ordering.asgi:application --reload
-
-# Or run with Daphne
-# daphne -p 8000 food_ordering.asgi:application
 ```
 
 Visit `http://localhost:8000/` to start using the application.
@@ -172,14 +197,14 @@ Visit `http://localhost:8000/` to start using the application.
 
 Access the admin dashboard at `/admin/` to manage users, menu items, orders, and feedback.
 
-## Order Status Flow
+## 📖 Order Status Flow
 
 ```
 Received → Preparing → Ready for Pick-Up → Completed
-                                                      
+
 Any status → Cancelled
 ```
 
-## License
+## 📄 License
 
 This project is for educational purposes.

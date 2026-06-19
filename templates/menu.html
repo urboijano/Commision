@@ -523,16 +523,32 @@ document.querySelector('.add-to-cart-modal-btn')?.addEventListener('click', func
 });
 
 let menuWs = null;
+let wsReconnectAttempts = 0;
+const WS_MAX_RECONNECT_DELAY = 30000;
+let menuPollInterval = null;
+
+function getWsReconnectDelay() {
+  const delay = Math.min(1000 * Math.pow(2, wsReconnectAttempts), WS_MAX_RECONNECT_DELAY);
+  return delay + Math.random() * 1000;
+}
 
 function connectMenuWebSocket() {
   const token = getToken();
-  if (!token) return;
+  if (!token) { setTimeout(connectMenuWebSocket, 3000); return; }
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = protocol + '//' + window.location.host + '/ws/orders/?token=' + encodeURIComponent(token);
 
   try {
     menuWs = new WebSocket(wsUrl);
+
+    menuWs.onopen = function () {
+      wsReconnectAttempts = 0;
+      if (menuPollInterval) {
+        clearInterval(menuPollInterval);
+        menuPollInterval = null;
+      }
+    };
 
     menuWs.onmessage = function (event) {
       try {
@@ -544,14 +560,22 @@ function connectMenuWebSocket() {
     };
 
     menuWs.onclose = function () {
-      setTimeout(connectMenuWebSocket, 3000);
+      wsReconnectAttempts++;
+      setTimeout(connectMenuWebSocket, getWsReconnectDelay());
+      if (!menuPollInterval) {
+        menuPollInterval = setInterval(loadMenu, 15000);
+      }
     };
 
     menuWs.onerror = function () {
       menuWs.close();
     };
   } catch (e) {
-    setTimeout(connectMenuWebSocket, 5000);
+    wsReconnectAttempts++;
+    setTimeout(connectMenuWebSocket, getWsReconnectDelay());
+    if (!menuPollInterval) {
+      menuPollInterval = setInterval(loadMenu, 15000);
+    }
   }
 }
 
@@ -561,7 +585,7 @@ lucide.createIcons();
 
 if (isAuthenticated()) {
   connectMenuWebSocket();
-  setInterval(loadMenu, 15000);
+  menuPollInterval = setInterval(loadMenu, 15000);
 }
 </script>
 {% endblock %}

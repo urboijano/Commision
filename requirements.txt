@@ -7,3 +7,4 @@ daphne==4.2.2
 asgiref==3.8.1
 PyJWT==2.13.0
 Pillow==12.2.0
+channels-redis==4.2.1

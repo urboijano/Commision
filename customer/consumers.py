@@ -8,7 +8,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync, sync_to_async
 from rest_framework_simplejwt.tokens import AccessToken
-from .models import User
+from .models import User, Notification
 
 logger = logging.getLogger(__name__)
 
@@ -66,31 +66,56 @@ class OrderConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps(event['data']))
 
 
+def _create_notification(user_id, notification_type, title, message, related_object_id=''):
+    try:
+        user = User.objects.get(user_id=user_id)
+        Notification.objects.create(
+            user=user,
+            notification_type=notification_type,
+            title=title,
+            message=message,
+            related_object_id=related_object_id,
+        )
+    except User.DoesNotExist:
+        pass
+
+
+def _send_to_channel(group_name, event):
+    try:
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(group_name, event)
+    except Exception:
+        logger.warning(f"Failed to send WS message to {group_name}", exc_info=True)
+
+
 def _send_to_group(group_name, data):
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
+    _send_to_channel(
         group_name,
         {'type': 'order_status_update', 'data': data}
     )
 
 
 def notify_admin_new_registration(user_data):
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
+    message = f'New {user_data.get("user_type", "user")} registration: {user_data.get("full_name", "Unknown")}'
+    _send_to_channel(
         'admin',
         {
             'type': 'new_registration',
             'data': {
                 'type': 'new_registration',
-                'message': f'New {user_data.get("user_type", "user")} registration: {user_data.get("full_name", "Unknown")}',
+                'message': message,
             }
         }
     )
+    for admin in User.objects.filter(user_type='admin', is_active=True):
+        _create_notification(
+            admin.user_id, 'registration', 'New Registration', message
+        )
 
 
 def notify_store_approved(store):
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
+    message = f'Your store "{store.name}" has been approved!'
+    _send_to_channel(
         f"user_{store.owner.user_id}",
         {
             'type': 'store_approved',
@@ -98,24 +123,32 @@ def notify_store_approved(store):
                 'type': 'store_approved',
                 'store_id': store.store_id,
                 'store_name': store.name,
-                'message': f'Your store "{store.name}" has been approved!',
+                'message': message,
             }
         }
+    )
+    _create_notification(
+        store.owner.user_id, 'store_approved', 'Store Approved', message,
+        str(store.store_id)
     )
 
 
 def notify_admin_new_store(store_data):
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
+    message = f'New store needs approval: {store_data.get("store_name", "Unknown")} by {store_data.get("owner_name", "Unknown")}'
+    _send_to_channel(
         'admin',
         {
             'type': 'store_approval_request',
             'data': {
                 'type': 'store_approval_request',
-                'message': f'New store needs approval: {store_data.get("store_name", "Unknown")} by {store_data.get("owner_name", "Unknown")}',
+                'message': message,
             }
         }
     )
+    for admin in User.objects.filter(user_type='admin', is_active=True):
+        _create_notification(
+            admin.user_id, 'registration', 'Store Approval Request', message
+        )
 
 
 def notify_store_new_order(order):
@@ -131,6 +164,11 @@ def notify_store_new_order(order):
     }
     for uid in store_owner_ids:
         _send_to_group(f"user_{uid}", data)
+        _create_notification(
+            uid, 'new_order', 'New Order',
+            f'New order #{order.order_number} received!',
+            str(order.order_id)
+        )
 
 
 def notify_order_status_change(order):
@@ -141,6 +179,10 @@ def notify_order_status_change(order):
         'message': f"Order {order.order_number} is now: {order.get_status_display()}",
     }
     _send_to_group(f"user_{order.user.user_id}", data)
+    _create_notification(
+        order.user.user_id, 'order_status', 'Order Status Update',
+        data['message'], str(order.order_id)
+    )
 
     store_owner_ids = set(
         order.items.filter(store_owner__isnull=False)
@@ -148,6 +190,10 @@ def notify_order_status_change(order):
     )
     for uid in store_owner_ids:
         _send_to_group(f"user_{uid}", data)
+        _create_notification(
+            uid, 'order_status', 'Order Status Update',
+            data['message'], str(order.order_id)
+        )
 
     if order.status == 'ready_for_pickup' and order.user.user_type in ('student', 'faculty'):
         stores = order.items.filter(store__isnull=False).values_list('store__name', flat=True).distinct()
@@ -208,11 +254,14 @@ def notify_store_new_feedback(feedback):
     }
     for uid in store_owner_ids:
         _send_to_group(f"user_{uid}", data)
+        _create_notification(
+            uid, 'new_feedback', 'New Feedback',
+            data['message'], str(feedback.feedback_id)
+        )
 
 
 def notify_menu_updated():
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
+    _send_to_channel(
         'menu_updates',
         {
             'type': 'menu_updated',
@@ -225,19 +274,28 @@ def notify_menu_updated():
 
 
 def notify_store_status_changed(store_id, is_open, store_name, owner_id):
-    channel_layer = get_channel_layer()
+    message = f'Store "{store_name}" is now {"Open" if is_open else "Closed"}'
     data = {
         'type': 'store_status_changed',
         'store_id': store_id,
         'is_open': is_open,
         'store_name': store_name,
-        'message': f'Store "{store_name}" is now {"Open" if is_open else "Closed"}',
+        'message': message,
     }
-    async_to_sync(channel_layer.group_send)(
+    _send_to_channel(
         'admin',
         {'type': 'store_status_changed', 'data': data}
     )
-    async_to_sync(channel_layer.group_send)(
+    _send_to_channel(
         f'user_{owner_id}',
         {'type': 'store_status_changed', 'data': data}
     )
+    _create_notification(
+        owner_id, 'store_status', 'Store Status Changed', message,
+        str(store_id)
+    )
+    for admin in User.objects.filter(user_type='admin', is_active=True):
+        _create_notification(
+            admin.user_id, 'store_status', 'Store Status Changed', message,
+            str(store_id)
+        )

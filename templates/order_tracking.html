@@ -102,6 +102,14 @@
 <script>
 const orderId = '{{ order_id }}';
 let ws = null;
+let wsReconnectAttempts = 0;
+const WS_MAX_RECONNECT_DELAY = 30000;
+let trackingPollInterval = null;
+
+function getWsReconnectDelay() {
+  const delay = Math.min(1000 * Math.pow(2, wsReconnectAttempts), WS_MAX_RECONNECT_DELAY);
+  return delay + Math.random() * 1000;
+}
 
 const STATUS_ORDER = ['pending', 'store_accepted', 'preparing', 'ready_for_pickup', 'completed'];
 const STATUS_META = {
@@ -286,15 +294,31 @@ function connectWebSocket() {
       }
     };
 
+    ws.onopen = function () {
+      wsReconnectAttempts = 0;
+      if (trackingPollInterval) {
+        clearInterval(trackingPollInterval);
+        trackingPollInterval = null;
+      }
+    };
+
     ws.onclose = function() {
-      setTimeout(connectWebSocket, 3000);
+      wsReconnectAttempts++;
+      setTimeout(connectWebSocket, getWsReconnectDelay());
+      if (!trackingPollInterval) {
+        trackingPollInterval = setInterval(loadTracking, 15000);
+      }
     };
 
     ws.onerror = function() {
       ws.close();
     };
   } catch (e) {
-    setTimeout(connectWebSocket, 15000);
+    wsReconnectAttempts++;
+    setTimeout(connectWebSocket, getWsReconnectDelay());
+    if (!trackingPollInterval) {
+      trackingPollInterval = setInterval(loadTracking, 15000);
+    }
   }
 }
 
@@ -327,7 +351,7 @@ loadTracking();
 
 if (isAuthenticated()) {
   connectWebSocket();
-  setInterval(loadTracking, 15000);
+  trackingPollInterval = setInterval(loadTracking, 15000);
 }
 </script>
 {% endblock %}

@@ -963,6 +963,14 @@ const pageTitles = {
 };
 
 let ws = null;
+let wsReconnectAttempts = 0;
+const WS_MAX_RECONNECT_DELAY = 30000;
+let adminPollInterval = null;
+
+function getWsReconnectDelay() {
+  const delay = Math.min(1000 * Math.pow(2, wsReconnectAttempts), WS_MAX_RECONNECT_DELAY);
+  return delay + Math.random() * 1000;
+}
 
 function connectWebSocket() {
   const token = getToken();
@@ -973,6 +981,11 @@ function connectWebSocket() {
     ws = new WebSocket(wsUrl);
     ws.onopen = function () {
       console.log('WebSocket connected');
+      wsReconnectAttempts = 0;
+      if (adminPollInterval) {
+        clearInterval(adminPollInterval);
+        adminPollInterval = null;
+      }
     };
     ws.onmessage = function (event) {
       const data = JSON.parse(event.data);
@@ -991,14 +1004,22 @@ function connectWebSocket() {
     };
     ws.onclose = function () {
       console.log('WebSocket closed, reconnecting...');
-      setTimeout(connectWebSocket, 3000);
+      wsReconnectAttempts++;
+      setTimeout(connectWebSocket, getWsReconnectDelay());
+      if (!adminPollInterval) {
+        adminPollInterval = setInterval(function () { loadUsers(); loadStores(); loadStats(); }, 15000);
+      }
     };
     ws.onerror = function (e) {
       console.error('WebSocket error', e);
     };
   } catch (err) {
     console.error('WebSocket creation failed', err);
-    setTimeout(connectWebSocket, 5000);
+    wsReconnectAttempts++;
+    setTimeout(connectWebSocket, getWsReconnectDelay());
+    if (!adminPollInterval) {
+      adminPollInterval = setInterval(function () { loadUsers(); loadStores(); loadStats(); }, 15000);
+    }
   }
 }
 
@@ -1009,7 +1030,7 @@ document.addEventListener('DOMContentLoaded', function () {
   loadMenu();
   loadFeedback();
   connectWebSocket();
-  setInterval(function () { loadUsers(); loadStores(); loadStats(); }, 15000);
+  adminPollInterval = setInterval(function () { loadUsers(); loadStores(); loadStats(); }, 15000);
 
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', function () {

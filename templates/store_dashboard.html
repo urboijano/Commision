@@ -436,6 +436,14 @@ let ordersSearchQuery = '';
 let overviewStatusFilter = 'active';
 let notifData = null;
 let ws = null;
+let wsReconnectAttempts = 0;
+const WS_MAX_RECONNECT_DELAY = 30000;
+let dashboardPollInterval = null;
+
+function getWsReconnectDelay() {
+  const delay = Math.min(1000 * Math.pow(2, wsReconnectAttempts), WS_MAX_RECONNECT_DELAY);
+  return delay + Math.random() * 1000;
+}
 let stores = [];
 let activeStoreId = null;
 let storeIsOpen = true;
@@ -1011,6 +1019,11 @@ function connectWebSocket() {
     ws = new WebSocket(wsUrl);
     ws.onopen = function () {
       console.log('WebSocket connected');
+      wsReconnectAttempts = 0;
+      if (dashboardPollInterval) {
+        clearInterval(dashboardPollInterval);
+        dashboardPollInterval = null;
+      }
     };
     ws.onmessage = function (event) {
       try {
@@ -1046,14 +1059,24 @@ function connectWebSocket() {
     };
     ws.onclose = function () {
       console.log('WebSocket closed, reconnecting...');
-      setTimeout(connectWebSocket, 3000);
+      wsReconnectAttempts++;
+      setTimeout(connectWebSocket, getWsReconnectDelay());
+      if (!dashboardPollInterval) {
+        const pollFn = function () { loadNotifications(); loadOrders(); loadMenu(); loadFeedback(); loadStoreStatus(); };
+        dashboardPollInterval = setInterval(pollFn, 15000);
+      }
     };
     ws.onerror = function (e) {
       console.error('WebSocket error', e);
     };
   } catch (err) {
     console.error('WebSocket creation failed', err);
-    setTimeout(connectWebSocket, 5000);
+    wsReconnectAttempts++;
+    setTimeout(connectWebSocket, getWsReconnectDelay());
+    if (!dashboardPollInterval) {
+      const pollFn = function () { loadNotifications(); loadOrders(); loadMenu(); loadFeedback(); loadStoreStatus(); };
+      dashboardPollInterval = setInterval(pollFn, 15000);
+    }
   }
 }
 
@@ -1064,7 +1087,8 @@ function loadAllDashboardData() {
   loadNotifications();
   loadStoreStatus();
   connectWebSocket();
-  setInterval(function () { loadNotifications(); loadOrders(); loadMenu(); loadFeedback(); loadStoreStatus(); }, 15000);
+  const pollFn = function () { loadNotifications(); loadOrders(); loadMenu(); loadFeedback(); loadStoreStatus(); };
+  dashboardPollInterval = setInterval(pollFn, 15000);
 }
 
 document.addEventListener('DOMContentLoaded', function () {

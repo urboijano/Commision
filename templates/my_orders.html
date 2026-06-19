@@ -326,9 +326,63 @@ document.getElementById('confirmCancelOrder')?.addEventListener('click', async f
   btn.style.background = originalBg;
 });
 
+let ws = null;
+let wsReconnectAttempts = 0;
+const WS_MAX_RECONNECT_DELAY = 30000;
+let ordersPollInterval = null;
+
+function getWsReconnectDelay() {
+  const delay = Math.min(1000 * Math.pow(2, wsReconnectAttempts), WS_MAX_RECONNECT_DELAY);
+  return delay + Math.random() * 1000;
+}
+
+function connectWebSocket() {
+  const token = getToken();
+  if (!token) { setTimeout(connectWebSocket, 3000); return; }
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws/orders/?token=${encodeURIComponent(token)}`;
+  try {
+    ws = new WebSocket(wsUrl);
+    ws.onopen = function () {
+      wsReconnectAttempts = 0;
+      if (ordersPollInterval) {
+        clearInterval(ordersPollInterval);
+        ordersPollInterval = null;
+      }
+    };
+    ws.onmessage = function (event) {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.order_id || data.order_number) {
+          loadOrders();
+        }
+      } catch (e) {}
+    };
+    ws.onclose = function () {
+      wsReconnectAttempts++;
+      setTimeout(connectWebSocket, getWsReconnectDelay());
+      if (!ordersPollInterval) {
+        ordersPollInterval = setInterval(function () { loadOrders(); }, 15000);
+      }
+    };
+    ws.onerror = function () {
+      ws.close();
+    };
+  } catch (e) {
+    wsReconnectAttempts++;
+    setTimeout(connectWebSocket, getWsReconnectDelay());
+    if (!ordersPollInterval) {
+      ordersPollInterval = setInterval(function () { loadOrders(); }, 15000);
+    }
+  }
+}
+
 loadOrders();
 updateCartBadge();
 lucide.createIcons();
-setInterval(function () { loadOrders(); }, 15000);
+if (isAuthenticated()) {
+  connectWebSocket();
+  ordersPollInterval = setInterval(function () { loadOrders(); }, 15000);
+}
 </script>
 {% endblock %}

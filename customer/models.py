@@ -447,3 +447,31 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"Feedback for {self.order.order_number} - {self.rating}/5"
+
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = [
+        ('new_order', 'New Order'),
+        ('order_status', 'Order Status Change'),
+        ('new_feedback', 'New Feedback'),
+        ('store_approved', 'Store Approved'),
+        ('store_status', 'Store Status Changed'),
+        ('registration', 'New Registration'),
+    ]
+    notification_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES, db_index=True)
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    related_object_id = models.CharField(max_length=100, blank=True, default='')
+    is_read = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read'], name='idx_notif_user_read'),
+        ]
+
+    def __str__(self):
+        return f"[{self.notification_type}] {self.title}"
