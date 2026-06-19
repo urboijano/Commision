@@ -3,8 +3,8 @@
 <p align="center">
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.14-blue?logo=python" alt="Python 3.14"></a>
   <a href="https://djangoproject.com"><img src="https://img.shields.io/badge/Django-6.0-green?logo=django" alt="Django 6.0"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow" alt="License"></a>
-  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs Welcome"></a>
+  <a href="#-license"><img src="https://img.shields.io/badge/License-MIT-yellow" alt="License"></a>
+  <a href="#-contributing"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs Welcome"></a>
 </p>
 
 A real-time food ordering platform designed for school and university canteens. Students and faculty can browse menus, place orders, and track their order status live via WebSockets — all from their mobile or desktop browser.
@@ -19,6 +19,7 @@ A real-time food ordering platform designed for school and university canteens. 
 - [🔗 WebSocket](#-websocket)
 - [🚀 Getting Started](#-getting-started)
 - [📖 Order Status Flow](#-order-status-flow)
+- [🙋 Contributing](#-contributing)
 - [📄 License](#-license)
 
 ## ✨ Features
@@ -212,6 +213,10 @@ Received → Preparing → Ready for Pick-Up → Completed
 Any status → Cancelled
 ```
 
+## 🙋 Contributing
+
+Contributions are welcome! Please see the [CONTRIBUTING.md](CONTRIBUTING.md) guide for details.
+
 ## 📄 License
 
-This project is for educational purposes.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
