@@ -25,7 +25,6 @@ from .models import (
     Order, OrderItem, OrderStatusHistory, Feedback, StoreProfile, Store,
     Discount, BundleDeal, BundleItem, StoreOwnerStatus,
 )
-from .consumers import notify_store_status_changed
 from .serializers import (
     RegisterSerializer, StoreRegisterSerializer, LoginSerializer, UserSerializer,
     MenuItemSerializer, MenuItemDetailSerializer, CartSerializer, CartItemSerializer,
@@ -38,7 +37,21 @@ from .serializers import (
     DiscountSerializer, BundleDealSerializer, ApplyDiscountSerializer,
     StoreSerializer, StoreUpdateSerializer,
 )
-from .consumers import notify_order_status_change, notify_store_new_order, notify_menu_updated, notify_admin_new_registration, notify_admin_new_store, notify_store_approved, notify_store_new_feedback
+try:
+    from .consumers import (
+        notify_order_status_change, notify_store_new_order, notify_menu_updated,
+        notify_admin_new_registration, notify_admin_new_store, notify_store_approved,
+        notify_store_new_feedback, notify_store_status_changed,
+    )
+except ImportError:
+    def notify_order_status_change(*a, **kw): pass
+    def notify_store_new_order(*a, **kw): pass
+    def notify_menu_updated(*a, **kw): pass
+    def notify_admin_new_registration(*a, **kw): pass
+    def notify_admin_new_store(*a, **kw): pass
+    def notify_store_approved(*a, **kw): pass
+    def notify_store_new_feedback(*a, **kw): pass
+    def notify_store_status_changed(*a, **kw): pass
 
 
 def get_tokens_for_user(user):
