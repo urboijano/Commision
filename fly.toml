@@ -1,0 +1,28 @@
+app = "kaonisu"
+
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 0
+  max_machines_running = 1
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
+
+[mounts]
+  source = "media"
+  destination = "/data/media"
+
+[env]
+  DJANGO_SETTINGS_MODULE = "food_ordering.settings"
+  DJANGO_MEDIA_ROOT = "/data/media"
+  PYTHONUNBUFFERED = "1"

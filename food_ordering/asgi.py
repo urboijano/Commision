@@ -9,6 +9,8 @@ django_asgi_app = get_asgi_application()
 
 from customer.routing import websocket_urlpatterns
 
+from django.conf import settings
+
 application = ProtocolTypeRouter({
     'http': django_asgi_app,
     'websocket': AuthMiddlewareStack(
@@ -16,6 +18,9 @@ application = ProtocolTypeRouter({
     ),
 })
 
-# Serve static files in development
-from django.contrib.staticfiles.handlers import ASGIStaticFilesHandler
-application = ASGIStaticFilesHandler(application)
+if settings.DEBUG:
+    from django.contrib.staticfiles.handlers import ASGIStaticFilesHandler
+    application = ASGIStaticFilesHandler(application)
+else:
+    from whitenoise import WhiteNoise
+    application = WhiteNoise(application, root=settings.STATIC_ROOT)
